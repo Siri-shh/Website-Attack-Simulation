@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cryptography analysis · Security console</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='console.css') }}">
+</head>
+<body>
+<header class="console-header">
+  <a class="brand" href="{{ url_for('dashboard') }}">Security console</a>
+  <nav class="console-nav" aria-label="Console pages">
+    <a href="{{ url_for('dashboard') }}">Monitoring</a>
+    <a href="{{ url_for('analysis_page') }}" aria-current="page">Analysis</a>
+  </nav>
+  <span class="role-badge">Administrator</span>
+</header>
+<main class="console-shell analysis-shell">
+  <section class="page-heading">
+    <div><p class="eyebrow">Transient demonstrations</p><h1>Cryptography analysis</h1>
+      <p class="lede">Explore bounded SHA-256 searches, AES-GCM operation timings, and single-block AES bit-flip behavior.</p>
+    </div>
+  </section>
+  <p class="transient-note">Inputs and results exist only for this request. They are not saved, logged, placed in a URL, or stored in browser storage. Maximum input: 10,240 UTF-8 bytes.</p>
+  {% if analysis_error %}<p class="analysis-error" role="alert">{{ analysis_error }}</p>{% endif %}
+  <section class="panel" aria-labelledby="analysis-input-title">
+    <h2 id="analysis-input-title">Choose an input</h2>
+    <p class="metadata-note">Leave the text empty to use the built-in sample. Each action submits independently.</p>
+    <form class="analysis-form" method="post" action="{{ url_for('analysis_aes_gcm') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label for="aes-gcm-input">Temporary input text</label>
+      <textarea id="aes-gcm-input" name="input_text" maxlength="10240" rows="4">{{ input_text }}</textarea>
+      <button type="submit">Run AES-GCM analysis</button>
+    </form>
+    <form class="analysis-form" method="post" action="{{ url_for('analysis_sha256') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label for="sha256-input">Temporary input text</label>
+      <textarea id="sha256-input" name="input_text" maxlength="10240" rows="4">{{ input_text }}</textarea>
+      <button type="submit">Run SHA-256 analysis</button>
+    </form>
+    <form class="analysis-form" method="post" action="{{ url_for('analysis_aes_primitive') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label for="aes-primitive-input">Temporary input text</label>
+      <textarea id="aes-primitive-input" name="input_text" maxlength="10240" rows="4">{{ input_text }}</textarea>
+      <button type="submit">Run AES primitive analysis</button>
+    </form>
+  </section>
+
+  {% if result_type == 'aes-gcm' %}
+  <section class="panel result-panel" aria-labelledby="gcm-result-title">
+    <p class="eyebrow">AES-256-GCM</p><h2 id="gcm-result-title">Authenticated encryption measurements</h2>
+    <p>These are local Python/API operation timings, including allocation and call overhead. They are not hardware AES throughput figures.</p>
+    <dl class="analysis-stats">
+      <dt>Input bytes</dt><dd>{{ result.input_bytes }}</dd><dt>Ciphertext and tag bytes</dt><dd>{{ result.ciphertext_bytes }}</dd>
+      <dt>Authentication tag bytes</dt><dd>{{ result.tag_bytes }}</dd><dt>Warm-up pairs</dt><dd>{{ result.warmup_pairs }}</dd>
+      <dt>Timed encryptions</dt><dd>{{ result.timed_encryptions }}</dd><dt>Timed decryptions</dt><dd>{{ result.timed_decryptions }}</dd>
+      <dt>Encryption median / p95 (ns)</dt><dd>{{ result.encryption_timing_ns.median }} / {{ result.encryption_timing_ns.p95 }}</dd>
+      <dt>Decryption median / p95 (ns)</dt><dd>{{ result.decryption_timing_ns.median }} / {{ result.decryption_timing_ns.p95 }}</dd>
+      <dt>Plaintext round trip</dt><dd>{{ 'Matches' if result.plaintext_matches else 'Does not match' }}</dd>
+    </dl>
+    <p><strong>Sample nonce:</strong> <code>{{ result.sample_nonce_hex }}</code></p>
+    <p><strong>Sample ciphertext and tag:</strong> <code>{{ result.sample_ciphertext_hex }}</code></p>
+    <p><strong>Recovered UTF-8 text:</strong></p><pre class="analysis-output">{{ result.recovered_text }}</pre>
+  </section>
+  {% elif result_type == 'sha256' %}
+  <section class="panel result-panel" aria-labelledby="sha-result-title">
+    <p class="eyebrow">SHA-256</p><h2 id="sha-result-title">Full digest and bounded searches</h2>
+    <p><strong>Input bytes:</strong> {{ result.input_bytes }} · <strong>Full 256-bit digest:</strong> <code>{{ result.target_digest_hex }}</code></p>
+    <p>Generic preimage and second-preimage work for SHA-256 is about 2<sup>256</sup>; generic collision work is about 2<sup>128</sup>. A no-match result in these bounded searches is expected and is not proof of resistance.</p>
+    {% for key, title in [('preimage', 'Preimage search'), ('second_preimage', 'Second-preimage search'), ('collision', 'Collision search')] %}
+      {% set panel = result[key] %}
+      <article class="search-result"><h3>{{ title }}</h3>
+        <p>Budget {{ panel.budget }} · attempts {{ panel.attempts }} · elapsed {{ panel.elapsed_ns }} ns · {{ 'match found' if panel.found else 'no match found' }}</p>
+        {% if key == 'collision' %}
+          {% if panel.found %}<p>First candidate: <code>{{ panel.first_candidate_hex }}</code></p><p>Second candidate: <code>{{ panel.second_candidate_hex }}</code></p><p>Shared full digest: <code>{{ panel.digest_hex }}</code></p>{% endif %}
+        {% elif panel.found %}<p>Matching candidate: <code>{{ panel.candidate_hex }}</code></p>{% endif %}
+      </article>
+    {% endfor %}
+  </section>
+  {% elif result_type == 'aes-primitive' %}
+  <section class="panel result-panel" aria-labelledby="primitive-title">
+    <p class="eyebrow">Single-block AES-256 primitive analysis</p><h2 id="primitive-title">Plaintext and key bit-flip measurements</h2>
+    <p>The block uses the first 16 UTF-8 input bytes, zero-padded when shorter and truncated when longer. This private one-block ECB transform is only a primitive measurement; ECB is unsuitable for protecting stored messages.</p>
+    <p><strong>Selected block:</strong> <code>{{ result.block_hex }}</code> · <strong>Independent random keys:</strong> {{ result.keys_tested }}</p>
+    <p><strong>Encryptions:</strong> {{ result.total_encryptions }} total, including {{ result.baseline_encryptions }} baselines · {{ result.plaintext_comparisons }} plaintext flips · {{ result.key_comparisons }} key flips.</p>
+    {% for key, title in [('plaintext_avalanche', 'Plaintext changes · illustration of diffusion'), ('key_avalanche', 'Key changes · illustration of key sensitivity associated with confusion')] %}
+      {% set stats = result[key] %}
+      <article class="search-result"><h3>{{ title }}</h3>
+        <dl class="analysis-stats"><dt>Mean changed bits</dt><dd>{{ stats.mean_changed_bits }}</dd><dt>Changed-bit range</dt><dd>{{ stats.min_changed_bits }}–{{ stats.max_changed_bits }}</dd><dt>Mean changed percent</dt><dd>{{ stats.mean_changed_percent }}%</dd><dt>Changed-percent range</dt><dd>{{ stats.min_changed_percent }}%–{{ stats.max_changed_percent }}%</dd></dl>
+      </article>
+    {% endfor %}
+    <h3>Strict-avalanche criterion observations</h3>
+    <p>Strict avalanche asks each output bit to change with probability one-half for every individual input-bit change. Each matrix cell is the observed output-bit flip percentage across 32 random keys for one selected input-bit flip. Mean absolute deviation from 50%: {{ result.sac.mean_abs_deviation_percentage_points }} percentage points. Cell range: {{ result.sac.min_flip_percent }}%–{{ result.sac.max_flip_percent }}%.</p>
+    <details><summary>Show the complete 128 by 128 flip-percentage matrix</summary><div class="table-wrap sac-table"><table><tbody>
+      {% for row in result.sac.flip_percentages %}<tr>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>{% endfor %}
+    </tbody></table></div></details>
+    <p class="metadata-note">These finite observations illustrate diffusion and key sensitivity. They do not prove confusion, establish the strict avalanche criterion, or provide a security verdict.</p>
+  </section>
+  {% endif %}
+</main>
+</body>
+</html>

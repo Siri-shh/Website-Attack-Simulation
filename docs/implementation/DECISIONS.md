@@ -110,3 +110,6 @@ D43 ? T23 analysis result contract: use Sol?s nested result dictionaries in the 
 
 
 D44 ? T23 Sol implementation review PASS. Preimage search counts candidate hashes, skips a source-identical generated candidate without consuming budget, and advances its counter; bounded work remains <= candidate limit hashes. Deterministic tests cover success paths and exact AES operation counts/timing indices. In the UI describe the SAC matrix as output-bit flip frequencies across 32 random keys for one selected input block; this is limited empirical evidence and not a security verdict.
+
+
+D45 ? T24 analysis page review PASS. Existing `require_login("admin")` redirects unauthorized roles to the console login; T24 tests assert that established behavior. All three analysis POSTs enforce CSRF and byte limits, set no-store, avoid database/audit/keyring calls, and display escaped transient inputs/results. Sol reviewed route and presentation scope and found no material fixes. M9 passed 344 tests with 1 skip.

@@ -134,3 +134,164 @@ def test_malicious_username_is_escaped_and_dynamic_rendering_uses_text_content(
     script = (_STATIC_ROOT / "console.js").read_text(encoding="utf-8")
     assert "textContent" in script
     assert "innerHTML" not in script
+
+
+def _analysis_result(name):
+    if name == "aes_gcm":
+        return {
+            "input_bytes": 4, "warmup_pairs": 20, "timed_encryptions": 1000,
+            "timed_decryptions": 1000, "ciphertext_bytes": 20, "tag_bytes": 16,
+            "sample_nonce_hex": "00" * 12, "sample_ciphertext_hex": "11" * 20,
+            "recovered_text": "demo", "plaintext_matches": True,
+            "encryption_timing_ns": {"median": 1.0, "p95": 2},
+            "decryption_timing_ns": {"median": 3.0, "p95": 4},
+        }
+    if name == "sha256":
+        panel = {"budget": 2, "attempts": 2, "elapsed_ns": 7, "found": False, "candidate_hex": None}
+        return {
+            "input_bytes": 4, "target_digest_hex": "ab" * 32,
+            "preimage": panel, "second_preimage": panel,
+            "collision": {**panel, "first_candidate_hex": None, "second_candidate_hex": None, "digest_hex": None},
+        }
+    avalanche = {
+        "mean_changed_bits": 64.0, "min_changed_bits": 50, "max_changed_bits": 78,
+        "mean_changed_percent": 50.0, "min_changed_percent": 39.0, "max_changed_percent": 61.0,
+    }
+    return {
+        "input_bytes": 4, "block_hex": "00" * 16, "keys_tested": 32,
+        "baseline_encryptions": 32, "plaintext_comparisons": 4096,
+        "key_comparisons": 8192, "total_encryptions": 12320,
+        "plaintext_avalanche": avalanche, "key_avalanche": avalanche,
+        "sac": {"flip_percentages": [[50.0] * 128 for _ in range(128)],
+                "mean_abs_deviation_percentage_points": 0.0,
+                "min_flip_percent": 50.0, "max_flip_percent": 50.0},
+    }
+
+
+def test_analysis_page_requires_admin_and_is_not_cached(real_console_client):
+    response = real_console_client.get("/analysis", base_url="https://localhost")
+    assert response.status_code in (302, 303)
+    assert response.headers["Cache-Control"] == "no-store"
+
+    with real_console_client.session_transaction() as state:
+        state["username"] = "bob"
+        state["role"] = "user"
+        state["session_ref"] = "test-session"
+    response = real_console_client.get("/analysis", base_url="https://localhost")
+    assert response.status_code in (302, 303)
+    assert response.headers["Cache-Control"] == "no-store"
+
+    _login(real_console_client)
+    response = real_console_client.get("/analysis", base_url="https://localhost")
+    assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "no-store"
+    assert b"name=\"input_text\"" in response.data
+    assert b"aes-gcm" in response.data and b"sha256" in response.data and b"aes-primitive" in response.data
+    assert b"console.js" not in response.data
+
+
+def test_dashboard_links_to_analysis(real_console_client):
+    _login(real_console_client)
+    response = real_console_client.get("/", base_url="https://localhost")
+    assert response.status_code == 200
+    assert b'href="/analysis"' in response.data
+
+
+def test_each_analysis_action_requires_csrf_and_uses_default_sample(real_console_client, monkeypatch):
+    from security_lab import console
+
+    calls = []
+    for action, attr in (("aes-gcm", "aes_gcm_analysis"), ("sha256", "sha256_analysis"),
+                         ("aes-primitive", "aes_primitive_analysis")):
+        def stub(data, *, _action=action):
+            calls.append((_action, data))
+            return _analysis_result(_action.replace("-", "_").replace("aes_primitive", "aes_primitive"))
+        monkeypatch.setattr(console, attr, stub)
+
+    _login(real_console_client)
+    for action in ("aes-gcm", "sha256", "aes-primitive"):
+        missing = real_console_client.post(f"/analysis/{action}", data={}, base_url="https://localhost")
+        assert missing.status_code == 400
+        assert missing.headers["Cache-Control"] == "no-store"
+        token = _csrf(real_console_client, "/analysis")
+        response = real_console_client.post(
+            f"/analysis/{action}", data={"csrf_token": token}, base_url="https://localhost"
+        )
+        assert response.status_code == 200
+        assert response.headers["Cache-Control"] == "no-store"
+    assert [action for action, _ in calls] == ["aes-gcm", "sha256", "aes-primitive"]
+    assert all(data == b"Cryptography analysis sample" for _, data in calls)
+
+
+def test_analysis_enforces_utf8_byte_limit_without_echoing_oversized_text(real_console_client, monkeypatch):
+    from security_lab import console
+
+    seen = []
+    monkeypatch.setattr(console, "sha256_analysis", lambda data: seen.append(data) or _analysis_result("sha256"))
+    _login(real_console_client)
+    token = _csrf(real_console_client, "/analysis")
+    exact = "é" * 5120
+    accepted = real_console_client.post(
+        "/analysis/sha256", data={"csrf_token": token, "input_text": exact}, base_url="https://localhost"
+    )
+    assert accepted.status_code == 200
+    assert seen == [exact.encode("utf-8")]
+    too_large = "é" * 5121
+    rejected = real_console_client.post(
+        "/analysis/sha256", data={"csrf_token": token, "input_text": too_large}, base_url="https://localhost"
+    )
+    assert rejected.status_code == 400
+    assert rejected.headers["Cache-Control"] == "no-store"
+    assert too_large.encode() not in rejected.data
+
+
+def test_analysis_escapes_user_text_and_shows_result_panels(real_console_client, monkeypatch):
+    from security_lab import console
+
+    monkeypatch.setattr(console, "aes_gcm_analysis", lambda data: {
+        **_analysis_result("aes_gcm"), "recovered_text": "<script>alert(1)</script>"
+    })
+    monkeypatch.setattr(console, "sha256_analysis", lambda data: _analysis_result("sha256"))
+    monkeypatch.setattr(console, "aes_primitive_analysis", lambda data: _analysis_result("aes_primitive"))
+    _login(real_console_client)
+    token = _csrf(real_console_client, "/analysis")
+    response = real_console_client.post(
+        "/analysis/aes-gcm", data={"csrf_token": token, "input_text": "<b>hello</b>"},
+        base_url="https://localhost",
+    )
+    assert response.status_code == 200
+    assert b"&lt;b&gt;hello&lt;/b&gt;" in response.data
+    assert b"&lt;script&gt;alert(1)&lt;/script&gt;" in response.data
+    token = _csrf(real_console_client, "/analysis")
+    sha_response = real_console_client.post(
+        "/analysis/sha256", data={"csrf_token": token}, base_url="https://localhost"
+    )
+    assert b"no-match result in these bounded searches is expected and is not proof" in sha_response.data
+    primitive_response = real_console_client.post(
+        "/analysis/aes-primitive", data={"csrf_token": token}, base_url="https://localhost"
+    )
+    assert b"ECB is unsuitable for protecting stored messages" in primitive_response.data
+    assert b"illustration of diffusion" in primitive_response.data
+    assert b"do not prove confusion" in primitive_response.data
+
+
+def test_analysis_posts_do_not_add_database_events(real_console_client, config, monkeypatch):
+    from security_lab import console
+    from security_lab.db import transaction
+
+    monkeypatch.setattr(console, "aes_gcm_analysis", lambda data: _analysis_result("aes_gcm"))
+    monkeypatch.setattr(console, "sha256_analysis", lambda data: _analysis_result("sha256"))
+    monkeypatch.setattr(console, "aes_primitive_analysis", lambda data: _analysis_result("aes_primitive"))
+    _login(real_console_client)
+
+    with transaction(config) as conn:
+        before = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+    token = _csrf(real_console_client, "/analysis")
+    for action in ("aes-gcm", "sha256", "aes-primitive"):
+        response = real_console_client.post(
+            f"/analysis/{action}", data={"csrf_token": token}, base_url="https://localhost"
+        )
+        assert response.status_code == 200
+    with transaction(config) as conn:
+        after = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+    assert after == before

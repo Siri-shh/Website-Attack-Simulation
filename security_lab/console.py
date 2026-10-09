@@ -11,6 +11,7 @@ from .auth import check_csrf, configure_auth, csrf_token, require_login
 from .config import Config, format_utc, normalize_ip, utc_us
 from .db import connect, transaction
 from .identity import KeyRing
+from .analysis import aes_gcm_analysis, aes_primitive_analysis, sha256_analysis
 
 
 _EVENT_FIELDS = (
@@ -125,6 +126,41 @@ def create_console_app(config: Config, keys: KeyRing) -> Flask:
     app = Flask(__name__, template_folder="templates")
     configure_auth(app, config, keys, required_role="admin")
     app.jinja_env.filters["utc"] = format_utc
+    analysis_sample = "Cryptography analysis sample"
+
+    @app.after_request
+    def disable_analysis_caching(response):
+        if request.path == "/analysis" or request.path.startswith("/analysis/"):
+            response.headers["Cache-Control"] = "no-store"
+        return response
+
+    def render_analysis(result=None, result_type=None, input_text=analysis_sample, error=None, status=200):
+        return render_template(
+            "console/analysis.html",
+            csrf_token=csrf_token(),
+            input_text=input_text,
+            result=result,
+            result_type=result_type,
+            analysis_error=error,
+        ), status
+
+    def analysis_input():
+        text = request.form.get("input_text", "")
+        if not text:
+            text = analysis_sample
+        data = text.encode("utf-8")
+        if len(data) > 10240:
+            abort(400)
+        return data, text
+
+    def run_analysis(result_type, function):
+        check_csrf()
+        data, text = analysis_input()
+        try:
+            result = function(data)
+        except Exception:
+            return render_analysis(input_text=text, error="Analysis could not be completed.", status=500)
+        return render_analysis(result, result_type, text)
 
     @app.get("/")
     @require_login("admin")
@@ -179,5 +215,25 @@ def create_console_app(config: Config, keys: KeyRing) -> Flask:
                 "outcome": "admin_unblock",
             })
         return redirect(url_for("dashboard"), code=303)
+
+    @app.get("/analysis")
+    @require_login("admin")
+    def analysis_page():
+        return render_analysis()
+
+    @app.post("/analysis/aes-gcm")
+    @require_login("admin")
+    def analysis_aes_gcm():
+        return run_analysis("aes-gcm", aes_gcm_analysis)
+
+    @app.post("/analysis/sha256")
+    @require_login("admin")
+    def analysis_sha256():
+        return run_analysis("sha256", sha256_analysis)
+
+    @app.post("/analysis/aes-primitive")
+    @require_login("admin")
+    def analysis_aes_primitive():
+        return run_analysis("aes-primitive", aes_primitive_analysis)
 
     return app

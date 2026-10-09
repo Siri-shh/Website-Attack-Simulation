@@ -43,7 +43,11 @@ Security-goal evidence to point out:
 
 Timings are saved measurements of individual operations for this version on this machine. They are not a benchmark. The server signing key attests to lab evidence; it is not a user's personal signature or proof of nonrepudiation.
 
-## 4. Preserve and inspect a capture
+## 4. Run the cryptography analysis
+
+Sign in to the administrator console and open **Analysis**. The page offers separate AES-GCM, SHA-256, and single-block AES primitive demonstrations. Leave the input empty to use the built-in sample, or enter temporary text up to 10,240 UTF-8 bytes. The server processes each request in memory; inputs and results are not saved. The page explains the bounded-search limits, local timing scope, ECB limitation, and empirical nature of the avalanche observations.
+
+## 5. Preserve and inspect a capture
 
 Stop cleanly, analyze the actual filename from `data/captures`, then restart:
 

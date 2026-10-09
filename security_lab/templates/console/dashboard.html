@@ -10,6 +10,10 @@
 <body>
   <header class="console-header">
     <a class="brand" href="{{ url_for('dashboard') }}">Security console</a>
+    <nav class="console-nav" aria-label="Console pages">
+      <a href="{{ url_for('dashboard') }}" aria-current="page">Monitoring</a>
+      <a href="{{ url_for('analysis_page') }}">Analysis</a>
+    </nav>
     <span class="role-badge">Administrator</span>
   </header>
   <main class="console-shell" id="console" data-csrf-token="{{ csrf_token }}">

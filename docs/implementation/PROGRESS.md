@@ -2,12 +2,12 @@
 
 Plan: `docs/superpowers/plans/2026-10-09-storage-security-plan.md`
 Spec: `docs/superpowers/specs/2026-10-09-storage-security-design.md`
-Status: **COMPLETE THROUGH M8**
+Status: **COMPLETE THROUGH M9**
 Execution approval: user's “continue” on 9 October 2026 authorizes the written plan and selected Luna/Sol delegation.
-Current milestone: M8 record history complete. Commit `57c1265`; tag `checkpoint/m8-record-history`.
-Next action: user reviews `docs/superpowers/plans/2026-10-10-crypto-analysis-plan.md`; after approval start T23. Analysis spec approved; tamper deferred.
+Current milestone: M9 cryptography analysis complete; tag `checkpoint/m9-analysis`.
+Next action: M9 analysis feature complete; see `checkpoint/m9-analysis`. Safe tamper remains deferred.
 Current task base commit: `e5f5d52` for T22 (prior T21 details remain in its report).
-Active T22 spec: `docs/superpowers/specs/2026-10-10-crypto-analysis-safe-tamper-design.md`. Current task phase: implementation plan review. Analysis-only spec committed at 81a93eb and approved by user. Next exact action: dispatch T24 Luna task; preserve T23 checkpoint at current HEAD.
+Active T22 spec: `docs/superpowers/specs/2026-10-10-crypto-analysis-safe-tamper-design.md`. Current task phase: M9 complete. T23 committed at 968c7f5; T24 integrated and verified. Final checkpoint commit/tag recorded below.
 Current branch: `feature/storage-security`.
 Initial design commit: `7b1e53c`.
 Planning checkpoint: Git tag `checkpoint/m0-plan` once this documentation is committed.
@@ -39,7 +39,7 @@ Historical M0/M1 preparation: planning checkpoint is committed and tagged. The v
 | T19 | M7 | gpt-6-luna | COMPLETE | Sol finalPASS; CLI/help/actualDockercommandschecked |
 | T20 | M7 | gpt-6.1-sol | COMPLETE | finalsuite317pass1skip112.83s; Node1pass; freshSolPASS; realDocker/browserPASS |
 | T21 | M8 | gpt-6.1-sol / gpt-6-luna | COMPLETE | Record history; tests and final Sol review PASS; commit 57c1265 tagged checkpoint/m8-record-history |
-| T22 | M9 | gpt-6.1-sol / gpt-6-luna | IN_PROGRESS | Three-panel Analysis page; T23 experiments complete (15 focused tests, Sol PASS); T24 admin integration next; Safe tamper deferred |
+| T22 | M9 | gpt-6.1-sol / gpt-6-luna | COMPLETE | Three-panel admin Analysis page; 344 passed/1 skipped; Sol T23/T24 reviews PASS; checkpoint/m9-analysis |
 
 ## Update protocol
 
@@ -64,7 +64,7 @@ At each milestone, stage the changed code/tests and all updated durable document
 | M6 | checkpoint/m6-deployment | verifiedCLI28pass1skip; compose0; Sol finalPASS; tag identifies commit |
 | M7 | checkpoint/m7-ready | verified317pass1Windows-skip (same test LinuxPASS), NodePASS, actualDocker/browser/replay/restart, freshSolPASS |
 | M8 | checkpoint/m8-record-history | Complete; commit 57c1265 tagged checkpoint/m8-record-history |
-| M9 | checkpoint/m9-analysis | Planned; implementation plan and approvals pending |
+| M9 | checkpoint/m9-analysis | Complete; analysis-only admin feature; 344 passed, 1 skipped; Sol PASS |
 
 ## Open limitations
 

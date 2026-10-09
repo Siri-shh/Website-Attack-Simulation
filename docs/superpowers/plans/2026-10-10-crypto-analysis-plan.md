@@ -66,11 +66,11 @@ git commit -m "feat: add isolated crypto analysis experiments"
 
 **Interfaces:** Import the three T23 functions. Register `/analysis` GET and three named POST endpoints under existing `create_console_app`; enforce existing `require_login('admin')`, `check_csrf`, CSRF-token template pattern, and server-side UTF-8 byte limit. Use separate result variable per panel; set `Cache-Control: no-store` on GET/POST responses. Do not call DB, audit, or keyring from analysis routes.
 
-- [ ] Add failing tests for admin-only GET, non-admin/anonymous denial, each POST CSRF rejection, byte-limit boundary, default sample, transient text, escaped output, no-store response, and three panel labels.
-- [ ] Run `python -m pytest tests/test_analysis.py tests/test_console_ui.py -q`; confirm new route tests fail for intended missing routes.
-- [ ] Implement routes/template/navigation/styles and simple Demo instructions describing metrics and limitations; no safe-tamper control or mention as implemented functionality.
-- [ ] Run `python -m pytest tests/test_analysis.py tests/test_console_ui.py -q` and then `python -m pytest -q`; controller records exact outcomes.
-- [ ] Sol independently reviews the integrated feature. Fix findings, rerun relevant tests, update T24 report and progress.
+- [x] Author route/UI tests first for admin-only access, non-admin/anonymous redirects, each POST CSRF rejection, byte-limit boundary, default sample, transient text, escaped output, no-store response, and three panel labels. Controller confirms completed focused tests below; pre-implementation red output was not captured because the worker may not run commands.
+- [x] Controller ran `python -m pytest tests/test_analysis.py tests/test_console_ui.py -q`: 26 passed in 14.33s after correcting the non-admin expectation to the existing redirect behavior.
+- [x] Implemented routes/template/navigation/styles and Demo instructions for metrics and limitations; no safe-tamper feature was added.
+- [x] Controller ran focused tests: 26 passed in 14.33s; full `python -m pytest -q`: 344 passed, 1 skipped in 154.44s.
+- [x] GPT-6.1 Sol independent T24 review: PASS; no material fixes required. Reports/progress updated.
 - [ ] Controller creates the M9 completion checkpoint only after full suite and Sol PASS:
 
 ```powershell
