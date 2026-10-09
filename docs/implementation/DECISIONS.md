@@ -107,3 +107,6 @@ D42 ? T22 scope narrowed by user: Safe tamper is on hold and is excluded from M9
 
 
 D43 ? T23 analysis result contract: use Sol?s nested result dictionaries in the T23 plan update, preserving raw nanoseconds and unrounded statistics. `candidate_limit` must be an integer in [1, 10000], explicitly rejecting bool and out-of-range values; each hash-property budget is independent. Inject private `_digest`, `_random_bytes`, and `_now_ns` seams so tests can prove full-digest success/collision/exhaustion deterministically without expensive searches. AES-primitive bit index 0 is the MSB of byte 0; SAC matrix rows are plaintext input bits and columns ciphertext output bits.
+
+
+D44 ? T23 Sol implementation review PASS. Preimage search counts candidate hashes, skips a source-identical generated candidate without consuming budget, and advances its counter; bounded work remains <= candidate limit hashes. Deterministic tests cover success paths and exact AES operation counts/timing indices. In the UI describe the SAC matrix as output-bit flip frequencies across 32 random keys for one selected input block; this is limited empirical evidence and not a security verdict.

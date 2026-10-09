@@ -45,11 +45,11 @@
 
 **Interfaces:** Export `MAX_INPUT_BYTES = 10240`, `aes_gcm_analysis(data: bytes) -> dict`, `sha256_analysis(data: bytes, *, candidate_limit: int = 10000) -> dict`, and `aes_primitive_analysis(data: bytes) -> dict`. Return contracts (lowercase hex; retain raw nanoseconds and unrounded stats): AES dict keys `input_bytes`, `warmup_pairs`, `timed_encryptions`, `timed_decryptions`, `ciphertext_bytes`, `tag_bytes`, `sample_nonce_hex`, `sample_ciphertext_hex`, `recovered_text`, `plaintext_matches`, `encryption_timing_ns:{median,p95}`, `decryption_timing_ns:{median,p95}`. SHA dict keys `input_bytes`, `target_digest_hex`, and `preimage`, `second_preimage`, `collision` nested results with `budget`, `attempts`, `elapsed_ns`, `found`, candidate hex evidence (collision has two candidates and digest). `candidate_limit` is integer 1..10000 (reject bool); budget applies separately to each search. AES primitive dict keys `input_bytes`, `block_hex`, `keys_tested`, `baseline_encryptions`, `plaintext_comparisons`, `key_comparisons`, `total_encryptions`, `plaintext_avalanche`, `key_avalanche` (each mean/min/max changed bits and percent), and `sac:{flip_percentages,mean_abs_deviation_percentage_points,min_flip_percent,max_flip_percent}`. SAC matrix is 128x128, rows plaintext input bits and columns ciphertext output bits. Bit index 0 is the MSB of byte 0. Use private `_digest`, `_random_bytes`, `_now_ns` seams for deterministic bounded hash tests; no public injection args. Decode recovered bytes with UTF-8 replacement for display, but verify byte equality. Module must not import console, DB, audit, or identity/keyring modules.
 
-- [ ] Write unit tests first: sample/warmup counts, unique nonces, encrypt/decrypt equality, median/p95; all three full-digest searches and limits; AES comparison counts/output widths and finite summaries.
-- [ ] Run `python -m pytest tests/test_analysis.py -q`; confirm expected failures before implementation.
-- [ ] Implement the three functions in `security_lab/analysis.py` following exact workloads and labels in the spec.
-- [ ] Run `python -m pytest tests/test_analysis.py -q`; report exact result without running shell commands.
-- [ ] Controller reviews report and diff; runs tests; Sol reviews crypto implementation. Then controller checkpoints:
+- [x] Write unit tests first: sample/warmup counts, unique nonces, encrypt/decrypt equality, median/p95; all three full-digest searches and limits; AES comparison counts/output widths and finite summaries.
+- [x] Author tests before implementation. The worker cannot run commands; a pre-implementation red result was not captured. Controller verified the completed suite with `python -m pytest tests/test_analysis.py -q` (15 passed).
+- [x] Implement the three functions in `security_lab/analysis.py` following exact workloads and labels in the spec.
+- [x] Controller ran `python -m pytest tests/test_analysis.py -q`: 15 passed in 0.79s. Luna did not run commands.
+- [x] Controller reviewed report/diff; tests passed; GPT-6.1 Sol (high) independently reviewed and returned PASS. Checkpoint committed as `feat: add isolated crypto analysis experiments`.
 
 ```powershell
 git diff --check
