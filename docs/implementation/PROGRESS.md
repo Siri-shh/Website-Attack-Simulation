@@ -4,10 +4,10 @@ Plan: `docs/superpowers/plans/2026-10-09-storage-security-plan.md`
 Spec: `docs/superpowers/specs/2026-10-09-storage-security-design.md`
 Status: **IMPLEMENTING**
 Execution approval: user's “continue” on 9 October 2026 authorizes the written plan and selected Luna/Sol delegation.
-Current milestone: M5 live capture and PCAP analysis.
-Next action: Commit/tag M4 then T13 Luna packet tests.
-Current task base commit: `dcff01c600e37e124bf5b24222a2b462eaf0e611`.
-Current task phase: T12 complete; M4 final Sol PASS; requiredsuite33 pass; D27 Node1/UI5 pass.
+Current milestone: M6 HTTPS launcher and two devices.
+Next action: Controller M5 commit/tag then T16 test creation.
+Current task base commit: `6af79998b3d1b9538a6038c356cd9b191c042ae5`.
+Current task phase: T15 M5 verified and reviewed; M5 Sol PASS; combined47 passed6.67s.
 Current branch: `feature/storage-security`.
 Initial design commit: `7b1e53c`.
 Planning checkpoint: Git tag `checkpoint/m0-plan` once this documentation is committed.
@@ -30,9 +30,9 @@ Planning checkpoint is committed and tagged. The virtual environment and locked 
 | T10 | M4 | gpt-6.1-sol | COMPLETE | rules21 passed3.02s; independent Sol PASS; audit/storage113 passed207.90s |
 | T11 | M4 | gpt-6-luna | COMPLETE | M4 final Sol PASS; requiredsuite33 pass; D27 Node1/UI5 pass |
 | T12 | M4 | gpt-6-luna | COMPLETE | M4 final Sol PASS; requiredsuite33 pass; D27 Node1/UI5 pass |
-| T13 | M5 | gpt-6-luna | TODO | none |
-| T14 | M5 | gpt-6.1-sol | TODO | none |
-| T15 | M5 | gpt-6.1-sol | TODO | none |
+| T13 | M5 | gpt-6-luna | COMPLETE | M5 Sol PASS; combined47 passed6.67s |
+| T14 | M5 | gpt-6.1-sol | COMPLETE | M5 Sol PASS; combined47 passed6.67s |
+| T15 | M5 | gpt-6.1-sol | COMPLETE | M5 Sol PASS; combined47 passed6.67s |
 | T16 | M6 | gpt-6.1-sol | TODO | none |
 | T17 | M6 | gpt-6-luna | TODO | none |
 | T18 | M7 | gpt-6-luna | TODO | none |
@@ -58,7 +58,7 @@ At each milestone, stage the changed code/tests and all updated durable document
 | M2 | checkpoint/m2-crypto | verified; full suite168 passed21.61s; Sol PASS; checkpoint tag identifies commit |
 | M3 | checkpoint/m3-storage | verified209 passed42.17s; independent Sol PASS; checkpoint tag identifies commit |
 | M4 | checkpoint/m4-console | verified33 tests plusD27 Node1/UI5; finalSolPASS; tag identifies completion commit |
-| M5 | checkpoint/m5-capture | not started |
+| M5 | checkpoint/m5-capture | verified47 passed6.67s; Sol PASS; tag identifies completion commit |
 | M6 | checkpoint/m6-deployment | not started |
 | M7 | checkpoint/m7-ready | not started |
 

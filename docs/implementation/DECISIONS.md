@@ -43,3 +43,19 @@ D25 (T10 Sol historical evidence): R4 requires a verified signed foreign_record_
 D26 (M4 Sol scoped review): T12 UI tests own their local config/keys-seeded real console fixture; do not borrow the module-local T11 fixture or refactor conftest. Seed the block only in the block-form test before asserting Unblock. Remove the unused broken T11 _record_block_event helper in a bounded mechanical cleanup; working block routes remain intact. See M4-review.md. This avoids broad rewrites and preserves empty-state coverage.
 
 D27 (M4 Sol polling fix): capture requestedDomain before fetch; after awaited JSON, render only while it equals the current selection. In finally clear inFlight, then immediately refresh if selection changed, keeping requests serialized. Verify the actual unmodified console.js through one dependency-free Node VM/test delayed-response regression. Node is a controller development-check tool only; no application/Docker runtime dependency is added.
+
+D28 (T13 Sol diagnosis): the IPv6 test still passed the IPv4 default server while its packet destination was IPv6. Set that test server=2001:db8::20; retain strict configured-destination parser filtering. This is a fixture correction, not a production change.
+
+## D29 — Capture lifecycle injection and status
+
+Sol design: CaptureWorker accepts optional process_factory and clock for deterministic lifecycle checks; export TSHARK_FIELDS for offline reuse. Concurrent stdout/stderr readers and an exit supervisor prevent pipe deadlock. Informational stderr alone does not degrade capture; bounded stderr informs actual exit errors. Missing interface/start failure is degraded, idle silence remains running. Stop terminates, waits with kill fallback, joins owned threads and retains the capture. No new start while owned resources remain. Health persists the five console allowlisted fields under capture.
+
+## D30 — Offline import result and validation
+
+Sol specifies alert_count as newly added alerts during this import: first five-port replay returns 1, duplicate import 0 while retaining its existing offline alert. analyze_pcap accepts injected process_runner (default subprocess.run), streams file SHA256, fully decodes/validates and sorts accepted fields before database insertion. PcapAnalysisError reports file, decoder and row errors. Offline replay never changes live capture status or blocks.
+
+## D31 — Launcher seeding and reset ownership
+
+Sol specifies fixed-ID missing seed records via seal_record and direct transactional INSERT because save_record non-null IDs are edits. Preserve existing users and records. Serve and reset exclusively claim the same atomic server.pid marker before initialization/mutation; refuse existing markers with inspection guidance. Reset only allowlisted database/sidecars and captures after full resolved containment and symlink/reparse preflight, preserving keys and unknown files; reject repository/root/ancestor data targets. Stop only owned capture/listeners; shutdown only started live serve loops, close owned bindings. Preserve marker when cleanup is incomplete. Current Werkzeug official docs/source checked for threaded TLS make_server lifecycle; Context7 incomplete specifics documented in T16 report.
+
+D31 reset safety detail: reject checkout .git/security_lab/tests/docs and read-only sibling Project subtrees; allow dedicated data dirs only with allowlisted deletion. Preflight every capture subentry using symlink/lstat Windows reparse checks before any removal. Existing malformed markers also require refusal; never kill a recorded PID or automatically remove a stale marker.

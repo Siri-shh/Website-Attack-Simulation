@@ -364,10 +364,10 @@ git status --short
 **Owned:** `security_lab/packets.py`, `tests/test_packets.py`.
 **Interfaces:** parse_packet_fields/insert_packet and exact field order above. Use tab separation, Decimal timestamps and capture/frame IDs. Parser itself is stateless; dedup via DB checks for the same capture/src/dst/ports/seq metadata persisted in packet payload.
 
-- [ ] Write fixtures: IPv4 and IPv6 incoming SYN accepted; ACK-only/outgoing/nonconfigured server ignored; Decimal `1700000000.123456` maps to1700000000123456; duplicate frame and SYN retransmission create one observation; five distinct server ports trigger actualR1 through insert_packet.
-- [ ] Controller runs `& $labPy -m pytest tests/test_packets.py -q` for red.
-- [ ] Implement exact parser/insertion with no packet decoding of encrypted login/content. Reject malformed fields and preserve capture references.
-- [ ] Controller reruns; expected PASS.
+- [x] Write fixtures: IPv4 and IPv6 incoming SYN accepted; ACK-only/outgoing/nonconfigured server ignored; Decimal `1700000000.123456` maps to1700000000123456; duplicate frame and SYN retransmission create one observation; five distinct server ports trigger actualR1 through insert_packet.
+- [x] Controller runs `& $labPy -m pytest tests/test_packets.py -q` for red.
+- [x] Implement exact parser/insertion with no packet decoding of encrypted login/content. Reject malformed fields and preserve capture references.
+- [x] Controller reruns; expected PASS.
 
 ### Task T14: Supervised live TShark capture
 
@@ -375,10 +375,10 @@ git status --short
 **Owned:** `security_lab/capture.py`, `tests/test_capture.py`.
 **Interfaces:** CaptureWorker and status above; feed accepted lines to insert_packet. Dependencies injected for process simulation in unit tests. Subagent writes lifecycle code; actual commands/process verification remain controller-only.
 
-- [ ] Write fake-process tests: stdout produces a persisted packet+alert; stderr/process failure recordsdegraded; idle running process staysrunning; stop waits/cleans only owned process and retains capturepath; configured interface and all fields appear in argv without shell=True.
-- [ ] Controller runs `& $labPy -m pytest tests/test_capture.py -q` for red.
-- [ ] Implement bounded stdout/stderr supervision, explicit startup failure and shutdown, PCAP naming per UUID. Do not assume Windows can observe Docker bridge traffic from the host.
-- [ ] Controller reruns; expected PASS; Sol reviewer approves lifecycle before launcher.
+- [x] Write fake-process tests: stdout produces a persisted packet+alert; stderr/process failure recordsdegraded; idle running process staysrunning; stop waits/cleans only owned process and retains capturepath; configured interface and all fields appear in argv without shell=True.
+- [x] Controller runs `& $labPy -m pytest tests/test_capture.py -q` for red.
+- [x] Implement bounded stdout/stderr supervision, explicit startup failure and shutdown, PCAP naming per UUID. Do not assume Windows can observe Docker bridge traffic from the host.
+- [x] Controller reruns; expected PASS; Sol reviewer approves lifecycle before launcher.
 
 ### Task T15: Idempotent offline PCAP import
 
@@ -386,10 +386,10 @@ git status --short
 **Owned:** `security_lab/pcap.py`, `tests/test_pcap.py`.
 **Interfaces:** analyze_pcap; return `{domain: str, inserted_events: int, alert_count: int}`. File hash domain/capture identity, shared TShark fields and sorted normalization.
 
-- [ ] Write import tests using injected decoded fields and a fixture capture: five distinctports produces offlineR1, second import inserts0/adds0alerts, live snapshot unchanged, no R2-R5 without app events, file path/spaces do not invoke a shell, malformed file reports an explicit error.
-- [ ] Controller runs `& $labPy -m pytest tests/test_pcap.py -q` for red.
-- [ ] Implement stream/hash/import contract. Do not invent application evidence or duplicate live observations under live scope during offline replay.
-- [ ] Controller reruns; expected PASS. Real PCAP readability is verified in Docker at T20.
+- [x] Write import tests using injected decoded fields and a fixture capture: five distinctports produces offlineR1, second import inserts0/adds0alerts, live snapshot unchanged, no R2-R5 without app events, file path/spaces do not invoke a shell, malformed file reports an explicit error.
+- [x] Controller runs `& $labPy -m pytest tests/test_pcap.py -q` for red.
+- [x] Implement stream/hash/import contract. Do not invent application evidence or duplicate live observations under live scope during offline replay.
+- [x] Controller reruns; expected PASS. Real PCAP readability is verified in Docker at T20.
 
 **M5 review/checkpoint Ã¢â‚¬â€ controller:** Sol reviews packet normalization/domain isolation plus unresolved capture concerns. Run packets/capture/pcap and rule tests, then:
 
