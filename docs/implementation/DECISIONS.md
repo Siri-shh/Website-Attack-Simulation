@@ -19,5 +19,7 @@ These decisions travel with the repository and override conflicting worker assum
 | D13 | Durable tracked ledger/reports survive completion and account changes; checkpoint tags mark milestone commits | Explicit resumability/version-history requirements override deletion of scratch ledgers |
 | D14 | Work in the user's requested new_project checkout on feature/storage-security; no additional worktree needed | New dedicated directory already isolates this project from the old Project directory |
 | D15 | Latest encrypted record only; no old ciphertext versions, revision browser, signup, or repeated benchmark suite | Keep the approved storage scope small |
+| D16 | Include templates/*.html as well as templates/**/*.html in package data; ignore generated *.egg-info/ | Ensure the shared root login template is packaged and editable-install metadata stays out of history |
+| D17 | Keep Windows TShark fallback; simulate missing PATH and fallback in the absent-tool test; require explicit NOT NULL even on SQLite text primary keys | Sol diagnosed the environment-specific test failure and schema NULL semantics during T01 |
 
 Append later entries with task ID, decision, reason, and effect on the contracts. Resolve ambiguities using the user requirements and spec before changing the plan.

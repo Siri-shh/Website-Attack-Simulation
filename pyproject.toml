@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "security-lab"
+version = "0.1.0"
+description = "Local information security storage lab"
+requires-python = ">=3.11"
+dependencies = [
+  "Flask>=3.1,<4",
+  "Werkzeug>=3.1,<4",
+  "cryptography>=42",
+  "requests>=2.32,<3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+include = ["security_lab"]
+
+[tool.setuptools.package-data]
+security_lab = ["schema.sql", "templates/*.html", "templates/**/*.html", "static/*.css", "static/*.js"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

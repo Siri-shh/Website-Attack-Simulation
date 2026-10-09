@@ -18,7 +18,7 @@
 - Owner's storage record page shows complete ciphertext, hash, signature, nonce, version, UTC timestamps, verification status, bytes and actual saved encryption/hash/signing durations.
 - Timings use `perf_counter_ns`, persist integer nanoseconds, display milliseconds; no benchmark loop, regenerated metrics on refresh, or password hash display.
 - Console polls every 2000 ms. Signed audit supplies application outcomes; HTTPS PCAP supplies network metadata. Manual block/unblock only; blocks affect storage admission, not OS firewall.
-- R1: 5 distinct TCP destination ports/30 seconds. R2: 5 failed logins/60 seconds per source+username. R3: success within 120 seconds after R2. R4: authenticated foreign existing record denied. R5: R2→R3→R4 in that login session within 300 seconds of success.
+- R1: 5 distinct TCP destination ports/30 seconds. R2: 5 failed logins/60 seconds per source+username. R3: success within 120 seconds after R2. R4: authenticated foreign existing record denied. R5: R2â†’R3â†’R4 in that login session within 300 seconds of success.
 - Docker server/client addresses 172.29.0.20/172.29.0.10; configurable two-computer LAN fallback. The host browser's actual address is not relabelled as the container client.
 - External attack helpers send ordinary requests and never register a scenario with the framework. No attack/vulnerability controls on either website.
 - Persist data, evidence, blocks, task reports and local milestone history. Explicit reset only.
@@ -171,18 +171,18 @@ TShark field order: `frame.number`, `frame.time_epoch`, `ip.src`, `ipv6.src`, `i
 
 `analyze_pcap(config: Config, keys: KeyRing, path: Path) -> dict`: SHA-256 file bytes defines `domain='offline:'+digest` and capture_id=digest, parse with TShark `-r` and the same fields. Offline replay generates R1 from packet observations only, not invented login/access outcomes. Duplicate import is idempotent; offline data must not affect live alerts/blocks/health. Console has a domain selector; default live, offline domain identified by capture hash.
 
-## Milestone M1 — Foundation
+## Milestone M1 â€” Foundation
 
 ### Task T01: Config, dependency manifest and schema definition
 
 **Worker:** gpt-6-luna. **Depends:** approved plan and controller branch setup.
 **Owned:** `pyproject.toml`, `.gitignore`, `security_lab/__init__.py`, `security_lab/config.py`, `security_lab/schema.sql`, `tests/test_config.py`.
-**Interfaces:** Config/env/time/IP contracts and the exact tables above. pyproject uses setuptools.build_meta (setuptools>=68 and wheel); package discovery includes security_lab only, with schema.sql, templates/**/*.html, static/*.css and static/*.js as package data. Set pytest testpaths=['tests']; dev extra pytest; require Python>=3.11. Exact ignore entries: `.venv/`, `data/`, `__pycache__/`, `.pytest_cache/`, `*.py[cod]`, `.env`, `.superpowers/`; retain all `docs/implementation/` files.
+**Interfaces:** Config/env/time/IP contracts and the exact tables above. pyproject uses setuptools.build_meta (setuptools>=68 and wheel); package discovery includes security_lab only, with schema.sql, templates/*.html, templates/**/*.html, static/*.css and static/*.js as package data. Set pytest testpaths=['tests']; dev extra pytest; require Python>=3.11. Exact ignore entries: `.venv/`, `data/`, `__pycache__/`, `.pytest_cache/`, `*.py[cod]`, `*.egg-info/`, `.env`, `.superpowers/`; retain all `docs/implementation/` files.
 
-- [ ] Write `test_defaults`, `test_distinct_ports`, `test_utc_and_mapped_ip`; assertions include `cfg.storage_port == 8443`, `cfg.console_port == 8444`, invalid equal ports raise ValueError, `format_utc(0) == '1970-01-01T00:00:00.000000Z'`, mapped `::ffff:192.168.1.2` becomes `192.168.1.2`.
-- [ ] Controller installs manifest, runs `& $labPy -m pytest tests/test_config.py -q`, and records intended red.
-- [ ] Implement exact config/contracts and literal SQL schema. Do not choose dependencies beyond the frozen stack or change table names.
-- [ ] Controller reruns the same check; expected PASS. Capture resolved versions in requirements-lock.txt.
+- [x] Write `test_defaults`, `test_distinct_ports`, `test_utc_and_mapped_ip`; assertions include `cfg.storage_port == 8443`, `cfg.console_port == 8444`, invalid equal ports raise ValueError, `format_utc(0) == '1970-01-01T00:00:00.000000Z'`, mapped `::ffff:192.168.1.2` becomes `192.168.1.2`.
+- [x] Controller installs manifest, runs `& $labPy -m pytest tests/test_config.py -q`, and records intended red.
+- [x] Implement exact config/contracts and literal SQL schema. Do not choose dependencies beyond the frozen stack or change table names.
+- [x] Controller reruns the same check; expected PASS. Capture resolved versions in requirements-lock.txt.
 
 ### Task T02: Transaction helpers and shared test fixtures
 
@@ -190,12 +190,12 @@ TShark field order: `frame.number`, `frame.time_epoch`, `ip.src`, `ipv6.src`, `i
 **Owned:** `security_lab/db.py`, `tests/conftest.py`, `tests/test_db.py`.
 **Interfaces:** connect, transaction, initialize_database above. Fixture `config` uses tmp_path data dir; no real project data touched. Later task fixtures append only their own dependencies.
 
-- [ ] Write `test_schema_idempotent`, `test_transaction_rolls_back`, `test_distinct_connections`. Assert two initializations preserve a inserted user; failed transaction leaves zero inserted rows; separate connections see committed rows and have foreign_keys=1.
-- [ ] Controller runs `& $labPy -m pytest tests/test_db.py -q` for red.
-- [ ] Implement specified helpers and temporary config fixture; use parameterized SQL and package-relative schema reading.
-- [ ] Controller reruns test_db; expected PASS.
+- [x] Write `test_schema_idempotent`, `test_transaction_rolls_back`, `test_distinct_connections`. Assert two initializations preserve a inserted user; failed transaction leaves zero inserted rows; separate connections see committed rows and have foreign_keys=1.
+- [x] Controller runs `& $labPy -m pytest tests/test_db.py -q` for red.
+- [x] Implement specified helpers and temporary config fixture; use parameterized SQL and package-relative schema reading.
+- [x] Controller reruns test_db; expected PASS.
 
-**M1 review/checkpoint — controller:** Sol reviews T01-T02. Run config+db checks and `git diff --check`; update reports/ledger/checklists, then:
+**M1 review/checkpoint â€” controller:** Sol reviews T01-T02. Run config+db checks and `git diff --check`; update reports/ledger/checklists, then:
 
 ```powershell
 git add -- pyproject.toml .gitignore requirements-lock.txt security_lab/__init__.py security_lab/config.py security_lab/schema.sql security_lab/db.py tests/conftest.py tests/test_config.py tests/test_db.py docs/implementation docs/superpowers/plans/2026-10-09-storage-security-plan.md
@@ -205,7 +205,7 @@ git tag -a checkpoint/m1-foundation -m 'M1 verified: configuration and database'
 git status --short
 ```
 
-## Milestone M2 — Persistent cryptography and signed audit
+## Milestone M2 â€” Persistent cryptography and signed audit
 
 ### Task T03: Persistent identities and HTTPS certificate
 
@@ -241,7 +241,7 @@ git status --short
 - [ ] Implement canonical signed payload and column agreement checks. No HMAC substitution, audit outbox, separate ingestion process or signing-on-page-load.
 - [ ] Controller reruns; expected PASS.
 
-**M2 review/checkpoint — controller:** Sol reviews audit plus unresolved concerns from T03/T04, without redoing already resolved reviews. Run identity/crypto/audit tests, diff check, update records, then:
+**M2 review/checkpoint â€” controller:** Sol reviews audit plus unresolved concerns from T03/T04, without redoing already resolved reviews. Run identity/crypto/audit tests, diff check, update records, then:
 
 ```powershell
 git add -- security_lab/identity.py security_lab/crypto.py security_lab/audit.py tests/conftest.py tests/test_identity.py tests/test_crypto.py tests/test_audit.py docs/implementation docs/superpowers/plans/2026-10-09-storage-security-plan.md
@@ -251,7 +251,7 @@ git tag -a checkpoint/m2-crypto -m 'M2 verified: keys encryption hashes signatur
 git status --short
 ```
 
-## Milestone M3 — Storage website and owner evidence
+## Milestone M3 â€” Storage website and owner evidence
 
 ### Task T06: Atomic record service
 
@@ -295,10 +295,10 @@ git status --short
 
 - [ ] Write HTML tests: owner sees exact stored ciphertext/hash/signature; title `<script>` renders escaped; foreign evidence stays inaccessible. Inject metrics60/20/50ns and assert visible `0.000060`, `0.000020`, `0.000050` ms. Refresh twice leaves nonce/signature/metrics unchanged; GET never calls seal_record.
 - [ ] Controller runs `& $labPy -m pytest tests/test_storage_ui.py -q` for red.
-- [ ] Implement straightforward login/list/create/edit/navigation and a detail evidence section. Performance view is a numeric three-row table plus three CSS bars scaled to the largest duration (zero denominator guarded). Label input sizes and “Measured operation durations for this saved version”; no fabricated speed superiority or experiment runner.
+- [ ] Implement straightforward login/list/create/edit/navigation and a detail evidence section. Performance view is a numeric three-row table plus three CSS bars scaled to the largest duration (zero denominator guarded). Label input sizes and â€œMeasured operation durations for this saved versionâ€; no fabricated speed superiority or experiment runner.
 - [ ] Controller reruns; expected PASS; browser inspection occurs at T20 rather than a redundant layout test suite.
 
-**M3 review/checkpoint — controller:** Sol reviews auth/routes/UI and their interaction with T06, focusing on owner-only evidence, independent cookies and real timings. Run records/auth/storage/storage_ui tests and diff check, update records, then:
+**M3 review/checkpoint â€” controller:** Sol reviews auth/routes/UI and their interaction with T06, focusing on owner-only evidence, independent cookies and real timings. Run records/auth/storage/storage_ui tests and diff check, update records, then:
 
 ```powershell
 git add -- security_lab/records.py security_lab/auth.py security_lab/storage.py security_lab/templates/login.html security_lab/templates/storage security_lab/static/storage.css tests/conftest.py tests/test_records.py tests/test_auth.py tests/test_storage.py tests/test_storage_ui.py docs/implementation docs/superpowers/plans/2026-10-09-storage-security-plan.md
@@ -308,7 +308,7 @@ git tag -a checkpoint/m3-storage -m 'M3 verified: login records owner evidence a
 git status --short
 ```
 
-## Milestone M4 — Deterministic rules and separate admin website
+## Milestone M4 â€” Deterministic rules and separate admin website
 
 ### Task T10: Atomic SQL-window rule evaluation
 
@@ -337,14 +337,14 @@ git status --short
 
 **Worker:** gpt-6-luna. **Depends:** T11.
 **Owned:** `security_lab/templates/console/dashboard.html`, `security_lab/static/console.js`, `security_lab/static/console.css`, `tests/test_console_ui.py`.
-**Interfaces:** Snapshot shape and routes T11. Page shows capture status/error, incoming connection attempts, signed application events, R1-R5 alert reasons/evidence, flagged sources and associated usernames, blocks with actions, and live/offline domain selector. “Flagged username” is labelled attempted/authenticated context, not proven attacker identity.
+**Interfaces:** Snapshot shape and routes T11. Page shows capture status/error, incoming connection attempts, signed application events, R1-R5 alert reasons/evidence, flagged sources and associated usernames, blocks with actions, and live/offline domain selector. â€œFlagged usernameâ€ is labelled attempted/authenticated context, not proven attacker identity.
 
 - [ ] Write HTML tests proving admin-only dashboard and visible forms/CSRF, source/account distinction, encrypted-network metadata label, empty state and capture-degraded message. Test snapshot escaping contract using a malicious-looking username; dynamic text must use textContent, not innerHTML interpolation.
 - [ ] Controller runs `& $labPy -m pytest tests/test_console_ui.py -q` for red.
 - [ ] Implement fetch polling every2000ms, retain current content on failed fetch and display connection warning, prevent overlapping in-flight polls. Render with DOM textContent; keep block/unblock ordinary POST forms. No attack launch controls or full-page reload.
 - [ ] Controller reruns; expected PASS. T20 verifies actual updates in a browser.
 
-**M4 review/checkpoint — controller:** Sol reviews separate app identity, manual controls and polling; T10 review remains part of evidence. Run rules/console/console_ui and relevant auth tests, then:
+**M4 review/checkpoint â€” controller:** Sol reviews separate app identity, manual controls and polling; T10 review remains part of evidence. Run rules/console/console_ui and relevant auth tests, then:
 
 ```powershell
 git add -- security_lab/rules.py security_lab/audit.py security_lab/console.py security_lab/templates/console security_lab/static/console.js security_lab/static/console.css tests/test_rules.py tests/test_console.py tests/test_console_ui.py docs/implementation docs/superpowers/plans/2026-10-09-storage-security-plan.md
@@ -354,7 +354,7 @@ git tag -a checkpoint/m4-console -m 'M4 verified: live alerts and manual IP bloc
 git status --short
 ```
 
-## Milestone M5 — Actual traffic and saved-PCAP analysis
+## Milestone M5 â€” Actual traffic and saved-PCAP analysis
 
 ### Task T13: Packet field normalization and atomic insertion
 
@@ -389,7 +389,7 @@ git status --short
 - [ ] Implement stream/hash/import contract. Do not invent application evidence or duplicate live observations under live scope during offline replay.
 - [ ] Controller reruns; expected PASS. Real PCAP readability is verified in Docker at T20.
 
-**M5 review/checkpoint — controller:** Sol reviews packet normalization/domain isolation plus unresolved capture concerns. Run packets/capture/pcap and rule tests, then:
+**M5 review/checkpoint â€” controller:** Sol reviews packet normalization/domain isolation plus unresolved capture concerns. Run packets/capture/pcap and rule tests, then:
 
 ```powershell
 git add -- security_lab/packets.py security_lab/capture.py security_lab/pcap.py tests/test_packets.py tests/test_capture.py tests/test_pcap.py docs/implementation docs/superpowers/plans/2026-10-09-storage-security-plan.md
@@ -399,7 +399,7 @@ git tag -a checkpoint/m5-capture -m 'M5 verified: actual network evidence and re
 git status --short
 ```
 
-## Milestone M6 — HTTPS launcher and two devices
+## Milestone M6 â€” HTTPS launcher and two devices
 
 ### Task T16: CLI, seeding, listener lifecycle and explicit reset
 
@@ -407,7 +407,7 @@ git status --short
 **Owned:** `security_lab/cli.py`, `security_lab/__main__.py`, `tests/test_cli.py`.
 **Interfaces:** `main(argv: list[str] | None=None) -> int`; commands `init [--renew-certificate]`, `serve`, `analyze-pcap <path>`, `reset --confirm RESET`. Config uses environment above. Init creates dirs/schema/keys/cert and missing seeds only; ordinary init/serve never resets existing records.
 
-- [ ] Seed bob/BobDemo!2026, alice/AliceDemo!2026, admin/AdminDemo!2026 as explicitly documented lab accounts with scrypt hashes. Initial records use IDs `00000000000000000000000000000001` (Bob), `00000000000000000000000000000002` (Alice), titles “Bob's record”/“Alice's record” and short ordinary text. No hardcoded session/encryption keys. Credentials are lab defaults, not user secrets.
+- [ ] Seed bob/BobDemo!2026, alice/AliceDemo!2026, admin/AdminDemo!2026 as explicitly documented lab accounts with scrypt hashes. Initial records use IDs `00000000000000000000000000000001` (Bob), `00000000000000000000000000000002` (Alice), titles â€œBob's recordâ€/â€œAlice's recordâ€ and short ordinary text. No hardcoded session/encryption keys. Credentials are lab defaults, not user secrets.
 - [ ] Write tests asserting init twice preserves edited data, roles/seeds valid, two app factory ports/secrets differ, analyze delegates offline, normal shutdown closes only owned listeners/capture. Reset without exactconfirmation does nothing; explicit reset clears DB/captures/blocks and seeds clean state while preserving existing key files. Resolve all deletion targets inside configured data_dir before removal; refuse unsafe root/repo target.
 - [ ] Controller runs `& $labPy -m pytest tests/test_cli.py -q` for red.
 - [ ] Implement two threaded Werkzeug make_server HTTPS listeners for this local lab, same configured certificate, no debugger/reloader; initialize once before threads. Launch CaptureWorker only with configured interface; missing capture is reported on console. Stop listeners/capture on interruption. Create `data_dir/server.pid` atomically with JSON pid/started_at_us on serve; remove the owned marker on normal stop. Serve/reset refuse an existing marker and explain how to inspect the recorded process before removing only a stale marker. Preserve data during recovery.
@@ -423,7 +423,7 @@ git status --short
 - [ ] Controller runs `docker compose config --quiet`, expected exit0; checks subnet and exactlytwo services with `docker compose config --services`.
 - [ ] No automated tests that simply duplicate YAML values; actual build/traffic check is T20.
 
-**M6 review/checkpoint — controller:** Sol reviews launch/config integration and two-device capture assumptions. Run cli plus current unit suite; validate compose; then:
+**M6 review/checkpoint â€” controller:** Sol reviews launch/config integration and two-device capture assumptions. Run cli plus current unit suite; validate compose; then:
 
 ```powershell
 git add -- security_lab/cli.py security_lab/__main__.py Dockerfile Dockerfile.client compose.yaml .dockerignore tests/test_cli.py docs/implementation docs/superpowers/plans/2026-10-09-storage-security-plan.md
@@ -433,7 +433,7 @@ git tag -a checkpoint/m6-deployment -m 'M6 verified: persistent launch and deplo
 git status --short
 ```
 
-## Milestone M7 — External clients, walkthrough and verified delivery
+## Milestone M7 â€” External clients, walkthrough and verified delivery
 
 ### Task T18: External attacker convenience client
 
@@ -493,7 +493,7 @@ docker compose up -d server
 
 Inspect console capture status/evidence between preflight and probing; do not continue if capture is degraded or the harmless client connection was not observed. The explicit Windows TShark path is verified on this host; use Config.tshark_path on a different host. The smoke script uses bounded polling for new alerts instead of sleep-based assertions. A stale launcher marker after an abnormal shutdown requires inspecting the process state before removing only that marker.
 
-**M7 final checkpoint — controller:** Run `& $labPy -m pytest -q`, relevant Docker evidence checks and `git diff --check`. Check no ignored runtime secrets/data are staged; update all durable records and then:
+**M7 final checkpoint â€” controller:** Run `& $labPy -m pytest -q`, relevant Docker evidence checks and `git diff --check`. Check no ignored runtime secrets/data are staged; update all durable records and then:
 
 ```powershell
 git add -- attacker_tools tests/test_attacker_client.py tests/test_smoke.py tests/docker_smoke.py README.md docs/DEMO.md docs/LAN.md docs/implementation docs/RESUME.md AGENTS.md docs/superpowers/specs/2026-10-09-storage-security-design.md docs/superpowers/plans/2026-10-09-storage-security-plan.md
