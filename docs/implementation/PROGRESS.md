@@ -2,12 +2,12 @@
 
 Plan: `docs/superpowers/plans/2026-10-09-storage-security-plan.md`
 Spec: `docs/superpowers/specs/2026-10-09-storage-security-design.md`
-Status: **IMPLEMENTING**
+Status: **WAITING_FOR_WORKSPACE_SPEND_CAP**
 Execution approval: user's “continue” on 9 October 2026 authorizes the written plan and selected Luna/Sol delegation.
 Current milestone: M4 detection and separate admin console.
-Next action: Commit/tag M3 then T10 Sol deterministic SQL rules tests.
-Current task base commit: `8e783d47e48b824f7537d43052cd509bebb8c08f`.
-Current task phase: T09 complete; M3 Sol PASS; full suite209 passed42.17s.
+Next action: Restore requested agent spending capacity, then T12 console UI tests/implementation; bundle T11/T12 review at M4. Preserve current code; do not restart T11.
+Current task base commit: `54ecffebff6b4cc313e9f9c71f31fd10c7948e86`.
+Current task phase: T11 verified; worker interrupted by workspace spend cap; console7 passed5.98s; M4 review pending; Luna workspace spend cap reached.
 Current branch: `feature/storage-security`.
 Initial design commit: `7b1e53c`.
 Planning checkpoint: Git tag `checkpoint/m0-plan` once this documentation is committed.
@@ -27,8 +27,8 @@ Planning checkpoint is committed and tagged. The virtual environment and locked 
 | T07 | M3 | gpt-6-luna | COMPLETE | M3 Sol PASS; full suite209 passed42.17s |
 | T08 | M3 | gpt-6-luna | COMPLETE | M3 Sol PASS; full suite209 passed42.17s |
 | T09 | M3 | gpt-6-luna | COMPLETE | M3 Sol PASS; full suite209 passed42.17s |
-| T10 | M4 | gpt-6.1-sol | TODO | none |
-| T11 | M4 | gpt-6-luna | TODO | none |
+| T10 | M4 | gpt-6.1-sol | COMPLETE | rules21 passed3.02s; independent Sol PASS; audit/storage113 passed207.90s |
+| T11 | M4 | gpt-6-luna | VERIFIED_PENDING_REVIEW | console7 passed5.98s; M4 review pending; Luna workspace spend cap reached |
 | T12 | M4 | gpt-6-luna | TODO | none |
 | T13 | M5 | gpt-6-luna | TODO | none |
 | T14 | M5 | gpt-6.1-sol | TODO | none |
@@ -65,3 +65,5 @@ At each milestone, stage the changed code/tests and all updated durable document
 ## Open limitations
 
 The actual two-physical-computer LAN test requires a second computer. Local configuration tests cannot replace that test; report the distinction when delivering the project.
+
+External execution limitation: the designated gpt-6-luna worker returned "You hit your spend cap set by the owner of your workspace." The user-mandated model routing remains in force; no model substitution was made. All writers stopped. T11 code passed controller tests but M4 is incomplete. Next task is T12 after agent capacity is restored.

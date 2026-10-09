@@ -78,13 +78,17 @@ def append_app_event(conn: Connection, keys: KeyRing, payload: dict) -> str:
 
     data = canonical_bytes(value)
     signature = base64.b64encode(keys.signing_key.sign(data)).decode("ascii")
-    conn.execute(
+    inserted = conn.execute(
         "INSERT INTO events (domain,event_id,time_us,kind,src_ip,dst_ip,dst_port,"
         "username,session_ref,record_id,outcome,payload_json,signature_b64) "
         "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) "
         "ON CONFLICT(domain,event_id) DO NOTHING",
         tuple(value[field] for field in _FIELDS) + (data.decode("utf-8"), signature),
     )
+    if inserted.rowcount == 1:
+        from .rules import evaluate_event
+
+        evaluate_event(conn, keys, value["domain"], event_id)
     return event_id
 
 

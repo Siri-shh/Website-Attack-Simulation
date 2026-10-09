@@ -316,11 +316,11 @@ git status --short
 **Owned:** `security_lab/rules.py`, evaluation hook in `security_lab/audit.py`, `tests/test_rules.py`.
 **Interfaces:** evaluate_event and rule/dedup contracts above. append_app_event calls it only on new insertion; SQL queries and event+alert commit use the same connection. Packet ingestion T13 uses the same evaluator.
 
-- [ ] Write fixed-time fixtures (no sleeps): four distinct ports emit noR1, fifth at30s inclusive emitsR1, repeated port adds no distinct count; source/destination/domain separation holds. Four valid failures emit noR2; fifth at60s inclusive emitsR2; unknown usernames count, different username/IP and invalid signatures do not.
-- [ ] Assert R3 at exactly120s qualifies and120s+1us does not; R4 only foreign existing authenticated denial; R5 at exactly300s qualifies and300s+1us/different session/source does not. R1/R2 crossing emits once while above threshold and rearms after membership falls below; re-evaluation/restart adds no duplicates. Forced evaluation failure rolls back the inserted event and all findings.
-- [ ] Controller runs `& $labPy -m pytest tests/test_rules.py -q` for red.
-- [ ] Implement the frozen SQL algorithm. Validate indexed fields against signed payload before application events count. Hash-based alert IDs and unique dedup are mandatory; no fixed cooldown, probability score, memory cache or arbitrary scenario label.
-- [ ] Controller reruns; expected PASS; fresh Sol reviewer checks boundaries and restart behavior before console consumption.
+- [x] Write fixed-time fixtures (no sleeps): four distinct ports emit noR1, fifth at30s inclusive emitsR1, repeated port adds no distinct count; source/destination/domain separation holds. Four valid failures emit noR2; fifth at60s inclusive emitsR2; unknown usernames count, different username/IP and invalid signatures do not.
+- [x] Assert R3 at exactly120s qualifies and120s+1us does not; R4 only foreign existing authenticated denial; R5 at exactly300s qualifies and300s+1us/different session/source does not. R1/R2 crossing emits once while above threshold and rearms after membership falls below; re-evaluation/restart adds no duplicates. Forced evaluation failure rolls back the inserted event and all findings.
+- [x] Controller runs `& $labPy -m pytest tests/test_rules.py -q` for red.
+- [x] Implement the frozen SQL algorithm. Validate indexed fields against signed payload before application events count. Hash-based alert IDs and unique dedup are mandatory; no fixed cooldown, probability score, memory cache or arbitrary scenario label.
+- [x] Controller reruns; expected PASS; fresh Sol reviewer checks boundaries and restart behavior before console consumption.
 
 ### Task T11: Separate admin app, snapshots and manual block actions
 
