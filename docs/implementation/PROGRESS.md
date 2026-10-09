@@ -5,9 +5,9 @@ Spec: `docs/superpowers/specs/2026-10-09-storage-security-design.md`
 Status: **COMPLETE THROUGH M8**
 Execution approval: user's “continue” on 9 October 2026 authorizes the written plan and selected Luna/Sol delegation.
 Current milestone: M8 record history complete. Commit `57c1265`; tag `checkpoint/m8-record-history`.
-Next action: T22 analysis-only spec is ready for self-review and its design checkpoint; then request user spec review. Do not invoke writing-plans or implement until the user approves the committed spec.
+Next action: user reviews `docs/superpowers/plans/2026-10-10-crypto-analysis-plan.md`; after approval start T23. Analysis spec approved; tamper deferred.
 Current task base commit: `e5f5d52` for T22 (prior T21 details remain in its report).
-Active T22 spec: `docs/superpowers/specs/2026-10-10-crypto-analysis-safe-tamper-design.md`. Current task phase: written spec/self-review. User approved the design sections; Sol algorithm review is recorded in `reports/T22-design.md`. Next exact action: self-review and commit the revised analysis-only spec plus ledger, then ask the user to review the committed spec.
+Active T22 spec: `docs/superpowers/specs/2026-10-10-crypto-analysis-safe-tamper-design.md`. Current task phase: implementation plan review. Analysis-only spec committed at 81a93eb and approved by user. Next exact action: obtain approval of the implementation plan, then dispatch T23.
 Current branch: `feature/storage-security`.
 Initial design commit: `7b1e53c`.
 Planning checkpoint: Git tag `checkpoint/m0-plan` once this documentation is committed.
