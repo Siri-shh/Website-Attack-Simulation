@@ -49,12 +49,22 @@ def test_init_seeds_fixed_ids_valid_roles_scrypt_and_encrypted_records(configure
     keys = load_or_create_keys(configured)
     records = {row["id"]: row for row in rows(configured, "records")}
     assert set(records) == {BOB_ID, ALICE_ID}
+    versions = rows(configured, "record_versions")
+    assert {(row["id"], row["version"]) for row in versions} == {
+        (BOB_ID, 1), (ALICE_ID, 1),
+    }
+    snapshots = {row["id"]: row for row in versions}
     for record_id, owner, title in ((BOB_ID, "bob", "Bob's record"), (ALICE_ID, "alice", "Alice's record")):
         row = records[record_id]
+        snapshot = snapshots[record_id]
         assert row["owner"] == owner and row["version"] == 1
+        assert snapshot["owner"] == owner and snapshot["version"] == 1
+        for field in ("nonce_b64", "ciphertext_b64", "sha256_hex", "signature_b64"):
+            assert snapshot[field] == row[field]
         plaintext = open_record(keys, row)
         assert plaintext["title"] == title
         assert plaintext["body"].strip()
+        assert open_record(keys, snapshot) == plaintext
     assert keys.storage_session_secret != keys.console_session_secret
     assert (configured.data_dir / "captures").is_dir()
     assert not (configured.data_dir / "server.pid").exists()

@@ -47,4 +47,36 @@
       </tbody>
     </table>
   </section>
+<section class="record-history" aria-labelledby="history-heading">
+  <h2 id="history-heading">Version history</h2>
+  {% if history|length > 1 %}
+    <details>
+      <summary>Show {{ history|length - 1 }} older version{{ 's' if history|length != 2 else '' }}</summary>
+      {% for version, version_plaintext in history[1:] %}
+        <article class="record-version">
+          <h3>Version {{ version.version }}</h3>
+          <p><strong>Title:</strong> {{ version_plaintext.title }}</p>
+          <p><strong>Text:</strong></p>
+          <pre>{{ version_plaintext.body }}</pre>
+          <p><strong>Ed25519 verification:</strong> Verified</p>
+          <dl>
+            <dt>Updated (UTC)</dt><dd>{{ version.updated_at_us|utc }}</dd>
+            <dt>Created (UTC)</dt><dd>{{ version.created_at_us|utc }}</dd>
+            <dt>Generated (UTC)</dt><dd>{{ version.generated_at_us|utc }}</dd>
+            <dt>Nonce</dt><dd><code>{{ version.nonce_b64 }}</code></dd>
+            <dt>Ciphertext</dt><dd><pre><code>{{ version.ciphertext_b64 }}</code></pre></dd>
+            <dt>SHA-256</dt><dd><code>{{ version.sha256_hex }}</code> · hash verified</dd>
+            <dt>Ed25519 signature</dt><dd><code>{{ version.signature_b64 }}</code> · signature verified</dd>
+            <dt>Saved measurements</dt>
+            <dd>Encryption {{ "%.6f"|format(version.encryption_ns / 1000000) }} ms; hashing {{ "%.6f"|format(version.hashing_ns / 1000000) }} ms; signing {{ "%.6f"|format(version.signing_ns / 1000000) }} ms.</dd>
+            <dt>Saved sizes</dt>
+            <dd>Plaintext {{ version.plaintext_bytes }} bytes; ciphertext {{ version.ciphertext_bytes }} bytes; envelope {{ version.envelope_bytes }} bytes.</dd>
+          </dl>
+        </article>
+      {% endfor %}
+    </details>
+  {% else %}
+    <p>No older versions.</p>
+  {% endif %}
+</section>
 {% endblock %}

@@ -2,12 +2,12 @@
 
 Plan: `docs/superpowers/plans/2026-10-09-storage-security-plan.md`
 Spec: `docs/superpowers/specs/2026-10-09-storage-security-design.md`
-Status: **COMPLETE**
+Status: **M8 VERIFIED; CHECKPOINT PENDING**
 Execution approval: user's “continue” on 9 October 2026 authorizes the written plan and selected Luna/Sol delegation.
-Current milestone: M7 complete; all implementation tasks verified and reviewed.
-Next action: No implementation tasks remain. Use README/DEMO; keep this checkout including .git and preserve runtime data/keys separately. Physical LAN hardware verification remains documented.
-Current task base commit: `d3e161e7989e98fc8ff52fa3645851d2d8b2d5a5`.
-Current task phase: T20 verified complete; M7 checkpoint; finalsuite317pass1skip112.83s; Node1pass; freshSolPASS; realDocker/browserPASS.
+Current milestone: M8 record history implemented, tested, reviewed, and running in Docker; commit/tag remain.
+Next action: controller runs final `git diff --check`, stages only T21 files, commits, and creates `checkpoint/m8-record-history` using the commands in `docs/implementation/briefs/T21.md`.
+Current task base commit: `669a1a084881387619bc25d9157302a399acf4fe`.
+Current task phase: T21 implementation and verification complete; checkpoint pending. Base `669a1a084881387619bc25d9157302a399acf4fe`. Red: 9 expected missing-history failures, 53 passed, 1 skipped in 62.65s. Focused green: 62 passed, 1 skipped in 70.49s. Full suite: 323 passed, 1 skipped in 148.16s. Independent GPT-6.1 Sol review PASS; `git diff --check` PASS. Docker server rebuilt, healthy, and `/login` returned HTTP 200. Controller owns Git.
 Current branch: `feature/storage-security`.
 Initial design commit: `7b1e53c`.
 Planning checkpoint: Git tag `checkpoint/m0-plan` once this documentation is committed.
@@ -38,6 +38,7 @@ Historical M0/M1 preparation: planning checkpoint is committed and tagged. The v
 | T18 | M7 | gpt-6-luna | COMPLETE | client8pass0.30s; T18/D34SolPASS |
 | T19 | M7 | gpt-6-luna | COMPLETE | Sol finalPASS; CLI/help/actualDockercommandschecked |
 | T20 | M7 | gpt-6.1-sol | COMPLETE | finalsuite317pass1skip112.83s; Node1pass; freshSolPASS; realDocker/browserPASS |
+| T21 | M8 | gpt-6.1-sol / gpt-6-luna | COMPLETE | Record history; tests and final Sol review PASS; commit/tag pending |
 
 ## Update protocol
 
@@ -61,6 +62,7 @@ At each milestone, stage the changed code/tests and all updated durable document
 | M5 | checkpoint/m5-capture | verified47 passed6.67s; Sol PASS; tag identifies completion commit |
 | M6 | checkpoint/m6-deployment | verifiedCLI28pass1skip; compose0; Sol finalPASS; tag identifies commit |
 | M7 | checkpoint/m7-ready | verified317pass1Windows-skip (same test LinuxPASS), NodePASS, actualDocker/browser/replay/restart, freshSolPASS |
+| M8 | checkpoint/m8-record-history | Verified; final diff check, commit, and tag remain |
 
 ## Open limitations
 
@@ -69,3 +71,7 @@ The actual two-physical-computer LAN test requires a second computer. Local conf
 Historical interruption: the T11 worker hit the workspace spend cap; work was saved at dcff01c. The user resumed and T12 Luna/Sol workers now run successfully. No model substitution was made.
 
 Completion: Docker server/client remain running and healthy; storage8443/admin8444 bindlocalhost. All checkpoint tags M0–M7 preserve local history on feature/storage-security. No push/merge/reset or removal of runtime records/history was performed. T20 transient Sol spend cap recovered through the same required Sol model; no substitution.
+
+## Startup recovery � 9 October 2026
+
+User reported server Started then disappeared from compose ps. Controller confirmed Exited(1), Running=false, Pid=0; logs refused existing /app/data/server.pid. Marker recorded container PID 1; only client container was running, neither host website port was listening, and no Windows security_lab serve process was found. GPT-6.1 Sol (high) reviewed the bounded manual recovery and returned PASS. Controller removed only this checkout's data/server.pid and ran docker compose up -d. Both client CA-verified HTTPS requests and host curl --cacert requests to /login returned 200 on 8443 and 8444; compose ps reported server healthy. Database, keys, captures and source preserved. Earlier shutdown cause unconfirmed. Report: reports/startup-recovery-2026-10-09.md. T21 remains at its recorded phase.

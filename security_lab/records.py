@@ -17,6 +17,15 @@ _RECORD_FIELDS = (
 )
 
 
+def insert_record_version(conn, row):
+    """Append a complete immutable snapshot of a current record row."""
+    conn.execute(
+        "INSERT INTO record_versions (" + ", ".join(_RECORD_FIELDS) + ") VALUES (" +
+        ", ".join("?" for _ in _RECORD_FIELDS) + ")",
+        tuple(row[field] for field in _RECORD_FIELDS),
+    )
+
+
 class RecordMissing(Exception):
     """The requested record does not exist."""
 
@@ -103,6 +112,7 @@ def save_record(
                     + " WHERE id=?",
                     tuple(row[field] for field in _RECORD_FIELDS[1:]) + (row["id"],),
                 )
+            insert_record_version(conn, row)
             _event(
                 conn, config, keys,
                 kind="record_created" if previous is None else "record_updated",
@@ -163,3 +173,46 @@ def read_record(
     if error is not None:
         raise error from None
     return row, plaintext
+
+
+def read_record_history(config: Config, keys: KeyRing, *, owner: str, record_id: str,
+                        src_ip: str, session_ref: str) -> list[tuple[dict, dict]]:
+    """Return all verified snapshots newest first, or fail without partial plaintext."""
+    error = None
+    verified = []
+    with transaction(config) as conn:
+        current, _current_plaintext, error = _checked_record(
+            conn, config, keys, owner=owner, record_id=record_id,
+            src_ip=src_ip, session_ref=session_ref,
+        )
+        if error is None:
+            snapshots = [dict(row) for row in conn.execute(
+                "SELECT * FROM record_versions WHERE id=? ORDER BY version DESC",
+                (record_id,),
+            ).fetchall()]
+            integrity_problem = not snapshots
+            if snapshots:
+                integrity_problem = (
+                    any(row["id"] != record_id or row["owner"] != owner for row in snapshots)
+                    or any(
+                        snapshots[index]["version"] != snapshots[index + 1]["version"] + 1
+                        for index in range(len(snapshots) - 1)
+                    )
+                    or any(current[field] != snapshots[0][field] for field in _RECORD_FIELDS)
+                )
+            if integrity_problem:
+                error = IntegrityError("Record history integrity verification failed")
+            else:
+                try:
+                    verified = [(row, open_record(keys, row)) for row in snapshots]
+                except IntegrityError:
+                    error = IntegrityError("Record history integrity verification failed")
+            if error is not None:
+                _event(conn, config, keys, kind="integrity_failure", owner=owner,
+                       record_id=record_id, src_ip=src_ip, session_ref=session_ref)
+            else:
+                _event(conn, config, keys, kind="record_read", owner=owner,
+                       record_id=record_id, src_ip=src_ip, session_ref=session_ref)
+    if error is not None:
+        raise error from None
+    return verified

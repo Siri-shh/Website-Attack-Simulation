@@ -6,7 +6,7 @@ from .auth import check_csrf, configure_auth, csrf_token, require_login
 from .config import Config, format_utc, normalize_ip
 from .crypto import IntegrityError
 from .identity import KeyRing
-from .records import RecordDenied, RecordMissing, list_records, read_record, save_record
+from .records import RecordDenied, RecordMissing, list_records, read_record, read_record_history, save_record
 
 
 def _source_ip() -> str:
@@ -119,7 +119,7 @@ def create_storage_app(config: Config, keys: KeyRing) -> Flask:
     @require_login("user")
     def record_detail(record_id: str):
         try:
-            record, plaintext = read_record(
+            history = read_record_history(
                 config,
                 keys,
                 owner=session["username"],
@@ -129,9 +129,10 @@ def create_storage_app(config: Config, keys: KeyRing) -> Flask:
             )
         except (RecordDenied, RecordMissing, IntegrityError) as error:
             return _record_error(error, record_id=record_id)
+        record, plaintext = history[0]
         return render_template(
             "storage/detail.html",
-            **_template_context(record=record, plaintext=plaintext, verified=True),
+            **_template_context(record=record, plaintext=plaintext, verified=True, history=history),
         )
 
     @app.route("/records/<record_id>/edit", methods=["GET", "POST"])

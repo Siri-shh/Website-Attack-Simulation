@@ -26,6 +26,7 @@ from .crypto import seal_record
 from .db import initialize_database, transaction
 from .identity import ensure_certificate, load_or_create_keys
 from .pcap import analyze_pcap
+from .records import insert_record_version
 from .storage import create_storage_app
 
 
@@ -70,6 +71,7 @@ def _seed(config, keys):
                 + ",".join("?" for _ in _RECORD_COLUMNS) + ")",
                 tuple(row[column] for column in _RECORD_COLUMNS),
             )
+            insert_record_version(conn, row)
 
 
 def _initialize(config, *, renew=False):

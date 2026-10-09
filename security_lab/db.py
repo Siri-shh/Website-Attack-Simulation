@@ -47,3 +47,26 @@ def initialize_database(config: Config) -> None:
     schema = schema_path.read_text(encoding="utf-8")
     with closing(connect(config)) as connection:
         connection.executescript(schema)
+
+    # Backfill existing records once. Keep the marker and copy in one
+    # transaction so later startup never silently repairs missing history.
+    with transaction(config) as conn:
+        migration = "record_versions_v1_backfill"
+        applied = conn.execute(
+            "SELECT 1 FROM schema_migrations WHERE name = ?", (migration,)
+        ).fetchone()
+        if applied is None:
+            conn.execute(
+                "INSERT INTO record_versions (id, version, owner, nonce_b64, "
+                "ciphertext_b64, sha256_hex, signature_b64, created_at_us, "
+                "updated_at_us, generated_at_us, plaintext_bytes, "
+                "ciphertext_bytes, envelope_bytes, encryption_ns, hashing_ns, "
+                "signing_ns) SELECT id, version, owner, nonce_b64, "
+                "ciphertext_b64, sha256_hex, signature_b64, created_at_us, "
+                "updated_at_us, generated_at_us, plaintext_bytes, "
+                "ciphertext_bytes, envelope_bytes, encryption_ns, hashing_ns, "
+                "signing_ns FROM records"
+            )
+            conn.execute(
+                "INSERT INTO schema_migrations (name) VALUES (?)", (migration,)
+            )

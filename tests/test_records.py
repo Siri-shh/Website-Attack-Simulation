@@ -53,7 +53,7 @@ def assert_signed_event(keys, event, *, kind, owner, record_id):
     }
 
 
-def test_create_then_edit_stores_only_latest_version_and_saved_timestamps(seeded, monkeypatch):
+def test_create_then_edit_keeps_signed_snapshots_and_saved_timestamps(seeded, monkeypatch):
     config, keys = seeded
     monkeypatch.setattr(records, "utc_us", lambda: 1_000_000)
     first = save(seeded, title="  Private title é  ", body="\nPrivate body\n")
@@ -70,13 +70,38 @@ def test_create_then_edit_stores_only_latest_version_and_saved_timestamps(seeded
     assert second["created_at_us"] == 1_000_000
     assert second["updated_at_us"] == second["generated_at_us"] == 2_000_000
     assert second["nonce_b64"] != first["nonce_b64"]
+    assert second["ciphertext_b64"] != first["ciphertext_b64"]
+    assert second["sha256_hex"] != first["sha256_hex"]
+    assert second["signature_b64"] != first["signature_b64"]
     assert stored_rows(config, "records") == [second]
+    versions = stored_rows(config, "record_versions")
+    assert [(row["id"], row["version"]) for row in versions] == [(first["id"], 1), (first["id"], 2)]
+    for snapshot, expected in zip(versions, (first, second)):
+        assert snapshot["id"] == expected["id"]
+        assert snapshot["owner"] == expected["owner"]
+        assert snapshot["ciphertext_b64"] == expected["ciphertext_b64"]
+        assert snapshot["nonce_b64"] == expected["nonce_b64"]
+        assert snapshot["sha256_hex"] == expected["sha256_hex"]
+        assert snapshot["signature_b64"] == expected["signature_b64"]
+        assert snapshot["created_at_us"] == expected["created_at_us"]
+        assert snapshot["updated_at_us"] == expected["updated_at_us"]
+        assert snapshot["generated_at_us"] == expected["generated_at_us"]
+        assert open_record(keys, snapshot) == open_record(keys, expected)
+        for timing in ("encryption_ns", "hashing_ns", "signing_ns"):
+            assert snapshot[timing] == expected[timing]
+    history = records.read_record_history(
+        config, keys, owner="alice", record_id=first["id"],
+        src_ip="192.0.2.10", session_ref="test-session",
+    )
+    assert [row["version"] for row, _ in history] == [2, 1]
+    assert [plaintext["body"] for _, plaintext in history] == ["Edited body", "\nPrivate body\n"]
     assert open_record(keys, second) == {"title": "Edited title", "body": "Edited body"}
     events = stored_rows(config, "events")
-    assert len(events) == 2
+    assert len(events) == 3
     for event, kind, time in zip(events, ("record_created", "record_updated"), (1_000_000, 2_000_000)):
         assert_signed_event(keys, event, kind=kind, owner="alice", record_id=first["id"])
         assert event["time_us"] == time
+    assert_signed_event(keys, events[-1], kind="record_read", owner="alice", record_id=first["id"])
 
 
 def test_read_returns_verified_stored_evidence_and_plaintext_without_regeneration(seeded):
@@ -167,6 +192,29 @@ def test_corrupt_owned_record_commits_integrity_failure_and_preserves_bad_row(se
     events = stored_rows(config, "events")
     assert len(events) == 2
     assert_signed_event(keys, events[-1], kind="integrity_failure", owner="alice", record_id=saved["id"])
+
+
+@pytest.mark.parametrize("damage", ["corrupt", "missing"])
+def test_history_read_fails_as_a_whole_for_corrupt_or_missing_snapshot(seeded, damage):
+    config, keys = seeded
+    saved = save(seeded)
+    save(seeded, record_id=saved["id"], body="Second private body")
+    with transaction(config) as conn:
+        if damage == "corrupt":
+            conn.execute(
+                "UPDATE record_versions SET sha256_hex=? WHERE id=? AND version=1",
+                ("0" * 64, saved["id"]),
+            )
+        else:
+            conn.execute(
+                "DELETE FROM record_versions WHERE id=? AND version=2",
+                (saved["id"],),
+            )
+    with pytest.raises(IntegrityError):
+        records.read_record_history(
+            config, keys, owner="alice", record_id=saved["id"],
+            src_ip="192.0.2.10", session_ref="test-session",
+        )
 
 
 @pytest.mark.parametrize("title,body", [

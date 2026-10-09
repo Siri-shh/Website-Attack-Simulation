@@ -37,7 +37,7 @@ This uses the default localhost addresses: https://127.0.0.1:8443 for storage an
 
 ## Normal record walkthrough
 
-Sign in as Bob at the storage URL. Create a record with a title and text, save it, reopen it, and edit it. The owner detail page shows the full Base64 ciphertext, nonce, version, UTC timestamps, SHA-256 envelope hash, Ed25519 digital signature, and verification results. It also shows saved-version input bytes and measured encryption, hash, and signing durations. Refreshing displays the stored values; these are individual operation timings on this machine, not a general benchmark. Bob's record evidence is owner-protected.
+Sign in as Bob at the storage URL. Create a record with a title and text, save it, reopen it, and edit it. The owner detail page shows the full Base64 ciphertext, nonce, version, UTC timestamps, SHA-256 envelope hash, Ed25519 digital signature, and verification results. It also shows saved-version input bytes and measured encryption, hash, and signing durations. Refreshing displays the stored values; these are individual operation timings on this machine, not a general benchmark. Bob's record evidence is owner-protected. Each save appears in version history; expand earlier versions to compare their ciphertext, hash, signature, and timings. Older texts remain encrypted and visible only to the owner.
 
 SHA-256 is a digest used to detect changes; the Ed25519 signature verifies the server-signed envelope. A hash by itself is not a digital signature. HTTPS protects request contents in transit. A packet capture can show addresses, ports, timing, and encrypted traffic metadata; the signed application events show outcomes such as login success or denied record access.
 

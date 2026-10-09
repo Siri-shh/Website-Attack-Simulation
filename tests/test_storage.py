@@ -1,13 +1,15 @@
 """Storage route contracts with a test-only template loader."""
 
 from contextlib import closing
+from pathlib import Path
 import re
 from urllib.parse import urlsplit
 
 import pytest
+from jinja2 import FileSystemLoader
 
 from security_lab import records
-from security_lab.db import connect
+from security_lab.db import connect, initialize_database, transaction
 
 
 def _csrf(client, path="/login"):
@@ -36,6 +38,42 @@ def _saved_record(config, keys, *, owner="alice"):
         config, keys, owner=owner, record_id=None, title="Saved title",
         body="Saved private body", src_ip="192.0.2.10", session_ref="test-session",
     )
+
+
+def test_legacy_history_backfill_runs_once_and_does_not_repair_deleted_snapshot(
+    storage_client, config, keys,
+):
+    saved = _saved_record(config, keys)
+    with transaction(config) as conn:
+        conn.execute("DROP TABLE record_versions")
+        conn.execute(
+            "DELETE FROM schema_migrations WHERE name='record_versions_v1_backfill'"
+        )
+
+    initialize_database(config)
+    with closing(connect(config)) as conn:
+        versions = [dict(row) for row in conn.execute(
+            "SELECT * FROM record_versions WHERE id=?", (saved["id"],)
+        )]
+    assert len(versions) == 1
+    snapshot = versions[0]
+    assert snapshot["version"] == saved["version"] == 1
+    for field in (
+        "owner", "nonce_b64", "ciphertext_b64", "sha256_hex", "signature_b64",
+        "created_at_us", "updated_at_us", "generated_at_us",
+    ):
+        assert snapshot[field] == saved[field]
+
+    with transaction(config) as conn:
+        conn.execute(
+            "DELETE FROM record_versions WHERE id=? AND version=1", (saved["id"],)
+        )
+    initialize_database(config)
+    with closing(connect(config)) as conn:
+        remaining = conn.execute(
+            "SELECT 1 FROM record_versions WHERE id=?", (saved["id"],)
+        ).fetchall()
+    assert remaining == []
 
 
 def test_unauthenticated_storage_list_redirects_to_login(storage_client):
@@ -75,14 +113,14 @@ def test_login_create_and_edit_use_csrf_and_redirect_303(storage_client):
 def test_record_detail_uses_read_service_and_renders_saved_evidence(storage_client, config, keys, monkeypatch):
     _login(storage_client)
     saved = _saved_record(config, keys)
-    original = records.read_record
+    original = records.read_record_history
     calls = []
 
     def read_spy(*args, **kwargs):
         calls.append((args, kwargs))
         return original(*args, **kwargs)
 
-    monkeypatch.setattr("security_lab.storage.read_record", read_spy)
+    monkeypatch.setattr("security_lab.storage.read_record_history", read_spy)
     response = storage_client.get(
         f"/records/{saved['id']}", base_url="https://localhost",
         environ_overrides={"REMOTE_ADDR": "192.0.2.10"},
@@ -94,6 +132,67 @@ def test_record_detail_uses_read_service_and_renders_saved_evidence(storage_clie
     assert b"Saved title|Saved private body" in response.data
     assert saved["ciphertext_b64"].encode("ascii") in response.data
     assert b"True" in response.data
+
+
+def test_record_detail_renders_each_owned_version_and_foreign_user_gets_no_evidence(
+    storage_client, storage_app, config, keys,
+):
+    storage_app.jinja_env.loader = FileSystemLoader(
+        str(Path(__file__).resolve().parents[1] / "security_lab" / "templates")
+    )
+    _login(storage_client)
+    saved = _saved_record(config, keys)
+    latest = records.save_record(
+        config, keys, owner="alice", record_id=saved["id"], title="New title",
+        body="New private body", src_ip="192.0.2.10", session_ref="test-session",
+    )
+    response = storage_client.get(f"/records/{saved['id']}", base_url="https://localhost")
+    assert response.status_code == 200
+    assert b"Saved title" in response.data
+    assert b"Saved private body" in response.data
+    assert b"New title" in response.data
+    assert b"New private body" in response.data
+    assert saved["ciphertext_b64"].encode("ascii") in response.data
+    assert latest["ciphertext_b64"].encode("ascii") in response.data
+    assert saved["sha256_hex"].encode("ascii") in response.data
+    assert latest["sha256_hex"].encode("ascii") in response.data
+    assert saved["signature_b64"].encode("ascii") in response.data
+    assert latest["signature_b64"].encode("ascii") in response.data
+
+    foreign = _saved_record(config, keys, owner="bob")
+    denied = storage_client.get(f"/records/{foreign['id']}", base_url="https://localhost")
+    assert denied.status_code == 403
+    assert b"Saved private body" not in denied.data
+    assert foreign["ciphertext_b64"].encode("ascii") not in denied.data
+    assert foreign["sha256_hex"].encode("ascii") not in denied.data
+    assert foreign["signature_b64"].encode("ascii") not in denied.data
+
+
+@pytest.mark.parametrize("damage", ["corrupt", "missing"])
+def test_record_detail_returns_no_partial_history_for_bad_snapshot(
+    storage_client, config, keys, damage,
+):
+    _login(storage_client)
+    saved = _saved_record(config, keys)
+    latest = records.save_record(
+        config, keys, owner="alice", record_id=saved["id"], title="Latest title",
+        body="Latest secret", src_ip="192.0.2.10", session_ref="test-session",
+    )
+    with transaction(config) as conn:
+        if damage == "corrupt":
+            conn.execute(
+                "UPDATE record_versions SET signature_b64=? WHERE id=? AND version=1",
+                ("!", saved["id"]),
+            )
+        else:
+            conn.execute(
+                "DELETE FROM record_versions WHERE id=? AND version=2", (saved["id"],)
+            )
+    response = storage_client.get(f"/records/{saved['id']}", base_url="https://localhost")
+    assert response.status_code == 409
+    assert b"Saved private body" not in response.data
+    assert b"Latest secret" not in response.data
+    assert latest["ciphertext_b64"].encode("ascii") not in response.data
 
 
 def test_foreign_record_view_and_edit_are_forbidden(storage_client, config, keys):

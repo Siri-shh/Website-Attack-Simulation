@@ -27,6 +27,30 @@ CREATE TABLE IF NOT EXISTS records (
 );
 CREATE INDEX IF NOT EXISTS records_owner_idx ON records(owner);
 
+CREATE TABLE IF NOT EXISTS record_versions (
+    id TEXT NOT NULL REFERENCES records(id) ON DELETE CASCADE,
+    version INTEGER NOT NULL CHECK (version >= 1),
+    owner TEXT NOT NULL REFERENCES users(username),
+    nonce_b64 TEXT NOT NULL,
+    ciphertext_b64 TEXT NOT NULL,
+    sha256_hex TEXT NOT NULL,
+    signature_b64 TEXT NOT NULL,
+    created_at_us INTEGER NOT NULL,
+    updated_at_us INTEGER NOT NULL,
+    generated_at_us INTEGER NOT NULL,
+    plaintext_bytes INTEGER NOT NULL CHECK (plaintext_bytes >= 0),
+    ciphertext_bytes INTEGER NOT NULL CHECK (ciphertext_bytes >= 0),
+    envelope_bytes INTEGER NOT NULL CHECK (envelope_bytes >= 0),
+    encryption_ns INTEGER NOT NULL CHECK (encryption_ns >= 0),
+    hashing_ns INTEGER NOT NULL CHECK (hashing_ns >= 0),
+    signing_ns INTEGER NOT NULL CHECK (signing_ns >= 0),
+    PRIMARY KEY (id, version)
+);
+
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    name TEXT NOT NULL PRIMARY KEY
+);
+
 CREATE TABLE IF NOT EXISTS events (
     seq INTEGER PRIMARY KEY AUTOINCREMENT,
     domain TEXT NOT NULL,

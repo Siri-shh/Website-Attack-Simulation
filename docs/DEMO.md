@@ -12,7 +12,7 @@ docker compose up -d
 
 Wait for the server health check. Open https://localhost:8443 and https://localhost:8444, trusting the lab certificate `data/keys/server.crt` if prompted. Make a harmless request to the storage site and confirm the admin console reports capture running and shows the connection.
 
-At the storage site, sign in as `bob / BobDemo!2026`, create a record, reopen it, then edit it. Inspect the owner's detail page: full ciphertext and nonce, SHA-256 hash, Ed25519 signature, verification results, version, UTC creation/update times, input bytes, and saved encryption/hash/signing durations. Refresh and confirm the saved evidence and timings persist. A hash detects changes; the Ed25519 signature verifies signed evidence.
+At the storage site, sign in as `bob / BobDemo!2026`, create a record, reopen it, then edit it. Inspect the owner's detail page: full ciphertext and nonce, SHA-256 hash, Ed25519 signature, verification results, version, UTC creation/update times, input bytes, and saved encryption/hash/signing durations. Refresh and confirm the saved evidence and timings persist. A hash detects changes; the Ed25519 signature verifies signed evidence. Each save appears in version history; expand earlier versions to compare their ciphertext, hash, signature, and timings. Older texts remain encrypted and visible only to the owner.
 
 ## 2. Use independent client requests if desired
 
