@@ -59,3 +59,11 @@ Sol specifies alert_count as newly added alerts during this import: first five-p
 Sol specifies fixed-ID missing seed records via seal_record and direct transactional INSERT because save_record non-null IDs are edits. Preserve existing users and records. Serve and reset exclusively claim the same atomic server.pid marker before initialization/mutation; refuse existing markers with inspection guidance. Reset only allowlisted database/sidecars and captures after full resolved containment and symlink/reparse preflight, preserving keys and unknown files; reject repository/root/ancestor data targets. Stop only owned capture/listeners; shutdown only started live serve loops, close owned bindings. Preserve marker when cleanup is incomplete. Current Werkzeug official docs/source checked for threaded TLS make_server lifecycle; Context7 incomplete specifics documented in T16 report.
 
 D31 reset safety detail: reject checkout .git/security_lab/tests/docs and read-only sibling Project subtrees; allow dedicated data dirs only with allowlisted deletion. Preflight every capture subentry using symlink/lstat Windows reparse checks before any removal. Existing malformed markers also require refusal; never kill a recorded PID or automatically remove a stale marker.
+
+## D32 — Graceful Docker SIGTERM shutdown
+
+Independent Sol review found serve handled KeyboardInterrupt but not Docker stop SIGTERM, risking leftover persistent server.pid and failed restart. Install and restore a SIGTERM handler during main-thread serve lifetime that enters the same owned-resource cleanup. Add deterministic handler-path regression and verify actual Docker stop/restart at T20. This is a launcher fix, not a process/PID cleanup bypass.
+
+## D33 — Client container stays available with finite sleeps
+
+Independent Sol review and controller Python reproduction confirmed time.sleep(float('inf')) raises OverflowError rather than keeping the client alive. Prescribed Luna correction is a while True loop with time.sleep(3600), represented with actual Python newlines inside the JSON CMD. Keep client independent; actual container liveness verified at T20.

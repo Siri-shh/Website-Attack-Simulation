@@ -409,11 +409,11 @@ git status --short
 **Owned:** `security_lab/cli.py`, `security_lab/__main__.py`, `tests/test_cli.py`.
 **Interfaces:** `main(argv: list[str] | None=None) -> int`; commands `init [--renew-certificate]`, `serve`, `analyze-pcap <path>`, `reset --confirm RESET`. Config uses environment above. Init creates dirs/schema/keys/cert and missing seeds only; ordinary init/serve never resets existing records.
 
-- [ ] Seed bob/BobDemo!2026, alice/AliceDemo!2026, admin/AdminDemo!2026 as explicitly documented lab accounts with scrypt hashes. Initial records use IDs `00000000000000000000000000000001` (Bob), `00000000000000000000000000000002` (Alice), titles Ã¢â‚¬Å“Bob's recordÃ¢â‚¬Â/Ã¢â‚¬Å“Alice's recordÃ¢â‚¬Â and short ordinary text. No hardcoded session/encryption keys. Credentials are lab defaults, not user secrets.
-- [ ] Write tests asserting init twice preserves edited data, roles/seeds valid, two app factory ports/secrets differ, analyze delegates offline, normal shutdown closes only owned listeners/capture. Reset without exactconfirmation does nothing; explicit reset clears DB/captures/blocks and seeds clean state while preserving existing key files. Resolve all deletion targets inside configured data_dir before removal; refuse unsafe root/repo target.
-- [ ] Controller runs `& $labPy -m pytest tests/test_cli.py -q` for red.
-- [ ] Implement two threaded Werkzeug make_server HTTPS listeners for this local lab, same configured certificate, no debugger/reloader; initialize once before threads. Launch CaptureWorker only with configured interface; missing capture is reported on console. Stop listeners/capture on interruption. Create `data_dir/server.pid` atomically with JSON pid/started_at_us on serve; remove the owned marker on normal stop. Serve/reset refuse an existing marker and explain how to inspect the recorded process before removing only a stale marker. Preserve data during recovery.
-- [ ] Controller reruns; expected PASS; Sol reviewer approves startup/reset/certificate integration.
+- [x] Seed bob/BobDemo!2026, alice/AliceDemo!2026, admin/AdminDemo!2026 as explicitly documented lab accounts with scrypt hashes. Initial records use IDs `00000000000000000000000000000001` (Bob), `00000000000000000000000000000002` (Alice), titles Ã¢â‚¬Å“Bob's recordÃ¢â‚¬Â/Ã¢â‚¬Å“Alice's recordÃ¢â‚¬Â and short ordinary text. No hardcoded session/encryption keys. Credentials are lab defaults, not user secrets.
+- [x] Write tests asserting init twice preserves edited data, roles/seeds valid, two app factory ports/secrets differ, analyze delegates offline, normal shutdown closes only owned listeners/capture. Reset without exactconfirmation does nothing; explicit reset clears DB/captures/blocks and seeds clean state while preserving existing key files. Resolve all deletion targets inside configured data_dir before removal; refuse unsafe root/repo target.
+- [x] Controller runs `& $labPy -m pytest tests/test_cli.py -q` for red.
+- [x] Implement two threaded Werkzeug make_server HTTPS listeners for this local lab, same configured certificate, no debugger/reloader; initialize once before threads. Launch CaptureWorker only with configured interface; missing capture is reported on console. Stop listeners/capture on interruption. Create `data_dir/server.pid` atomically with JSON pid/started_at_us on serve; remove the owned marker on normal stop. Serve/reset refuse an existing marker and explain how to inspect the recorded process before removing only a stale marker. Preserve data during recovery.
+- [x] Controller reruns; expected PASS; Sol reviewer approves startup/reset/certificate integration.
 
 ### Task T17: Docker server and independent client device
 
@@ -421,9 +421,9 @@ git status --short
 **Owned:** `Dockerfile`, `Dockerfile.client`, `compose.yaml`, `.dockerignore`.
 **Interfaces:** Two services `server` and `client` on internal subnet172.29.0.0/24, server.20/client.10. Server Python3.13 slim installs tshark noninteractively plus locked deps/project; command `python -m security_lab serve`. Server env LAB_BIND_HOST=0.0.0.0, LAB_SERVER_IP=172.29.0.20, LAB_CAPTURE_INTERFACE=eth0, LAB_TLS_NAMES=localhost,127.0.0.1,172.29.0.20,server; add NET_RAW/NET_ADMIN for capture; persist `./data:/app/data`; localhost8443/8444 published. Client Python3.13 slim installs requests, mounts `./attacker_tools:/tools:ro`, `./tests:/tests:ro` (smoke checks only) and `./data/keys/server.crt:/certs/server.crt:ro`; sleeps to remain available, no detector/controlserver. Cert must exist via controller init before client mount/start. Manifest/SQL/templates/static are copied into server image; source packaging includes them.
 
-- [ ] Implement the exact two-service configuration, healthcheck using HTTPS with server cert against `/login` and no credential leak. No old-project subnet/container names, Docker socket mount or shared privileged host networking. Exclude .git/.venv/data/docs reports from build context where unnecessary.
-- [ ] Controller runs `docker compose config --quiet`, expected exit0; checks subnet and exactlytwo services with `docker compose config --services`.
-- [ ] No automated tests that simply duplicate YAML values; actual build/traffic check is T20.
+- [x] Implement the exact two-service configuration, healthcheck using HTTPS with server cert against `/login` and no credential leak. No old-project subnet/container names, Docker socket mount or shared privileged host networking. Exclude .git/.venv/data/docs reports from build context where unnecessary.
+- [x] Controller runs `docker compose config --quiet`, expected exit0; checks subnet and exactlytwo services with `docker compose config --services`.
+- [x] No automated tests that simply duplicate YAML values; actual build/traffic check is T20.
 
 **M6 review/checkpoint Ã¢â‚¬â€ controller:** Sol reviews launch/config integration and two-device capture assumptions. Run cli plus current unit suite; validate compose; then:
 

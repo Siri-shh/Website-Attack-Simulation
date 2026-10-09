@@ -1,0 +1,69 @@
+name: storage-security-lab
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      LAB_BIND_HOST: 0.0.0.0
+      LAB_SERVER_IP: 172.29.0.20
+      LAB_CAPTURE_INTERFACE: eth0
+      LAB_TLS_NAMES: localhost,127.0.0.1,172.29.0.20,server
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    volumes:
+      - type: bind
+        source: ./data
+        target: /app/data
+    ports:
+      - "127.0.0.1:8443:8443"
+      - "127.0.0.1:8444:8444"
+    networks:
+      lab:
+        ipv4_address: 172.29.0.20
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import ssl, urllib.request; ctx=ssl.create_default_context(cafile='/app/data/keys/server.crt'); r=urllib.request.urlopen('https://localhost:8443/login', context=ctx, timeout=3); assert r.status == 200"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    volumes:
+      - type: bind
+        source: ./attacker_tools
+        target: /tools
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./tests
+        target: /tests
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./data/keys/server.crt
+        target: /certs/server.crt
+        read_only: true
+        bind:
+          create_host_path: false
+    networks:
+      lab:
+        ipv4_address: 172.29.0.10
+
+networks:
+  lab:
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.29.0.0/24
