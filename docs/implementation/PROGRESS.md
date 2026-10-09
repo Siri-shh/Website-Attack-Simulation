@@ -2,12 +2,12 @@
 
 Plan: `docs/superpowers/plans/2026-10-09-storage-security-plan.md`
 Spec: `docs/superpowers/specs/2026-10-09-storage-security-design.md`
-Status: **M8 VERIFIED; CHECKPOINT PENDING**
+Status: **COMPLETE THROUGH M8**
 Execution approval: user's “continue” on 9 October 2026 authorizes the written plan and selected Luna/Sol delegation.
-Current milestone: M8 record history implemented, tested, reviewed, and running in Docker; commit/tag remain.
-Next action: controller runs final `git diff --check`, stages only T21 files, commits, and creates `checkpoint/m8-record-history` using the commands in `docs/implementation/briefs/T21.md`.
+Current milestone: M8 record history complete. Commit `57c1265`; tag `checkpoint/m8-record-history`.
+Next action: use `RESUME.md` to continue from the next approved task; M8 verification and checkpoint are complete.
 Current task base commit: `669a1a084881387619bc25d9157302a399acf4fe`.
-Current task phase: T21 implementation and verification complete; checkpoint pending. Base `669a1a084881387619bc25d9157302a399acf4fe`. Red: 9 expected missing-history failures, 53 passed, 1 skipped in 62.65s. Focused green: 62 passed, 1 skipped in 70.49s. Full suite: 323 passed, 1 skipped in 148.16s. Independent GPT-6.1 Sol review PASS; `git diff --check` PASS. Docker server rebuilt, healthy, and `/login` returned HTTP 200. Controller owns Git.
+Current task phase: T21 complete and checkpointed. Base `669a1a084881387619bc25d9157302a399acf4fe`. Red: 9 expected missing-history failures, 53 passed, 1 skipped in 62.65s. Focused green: 62 passed, 1 skipped in 70.49s. Full suite: 323 passed, 1 skipped in 148.16s. Independent GPT-6.1 Sol review PASS; `git diff --check` PASS. Docker server rebuilt, healthy, and `/login` returned HTTP 200. Controller owns Git.
 Current branch: `feature/storage-security`.
 Initial design commit: `7b1e53c`.
 Planning checkpoint: Git tag `checkpoint/m0-plan` once this documentation is committed.
@@ -38,7 +38,7 @@ Historical M0/M1 preparation: planning checkpoint is committed and tagged. The v
 | T18 | M7 | gpt-6-luna | COMPLETE | client8pass0.30s; T18/D34SolPASS |
 | T19 | M7 | gpt-6-luna | COMPLETE | Sol finalPASS; CLI/help/actualDockercommandschecked |
 | T20 | M7 | gpt-6.1-sol | COMPLETE | finalsuite317pass1skip112.83s; Node1pass; freshSolPASS; realDocker/browserPASS |
-| T21 | M8 | gpt-6.1-sol / gpt-6-luna | COMPLETE | Record history; tests and final Sol review PASS; commit/tag pending |
+| T21 | M8 | gpt-6.1-sol / gpt-6-luna | COMPLETE | Record history; tests and final Sol review PASS; commit 57c1265 tagged checkpoint/m8-record-history |
 
 ## Update protocol
 
@@ -62,7 +62,7 @@ At each milestone, stage the changed code/tests and all updated durable document
 | M5 | checkpoint/m5-capture | verified47 passed6.67s; Sol PASS; tag identifies completion commit |
 | M6 | checkpoint/m6-deployment | verifiedCLI28pass1skip; compose0; Sol finalPASS; tag identifies commit |
 | M7 | checkpoint/m7-ready | verified317pass1Windows-skip (same test LinuxPASS), NodePASS, actualDocker/browser/replay/restart, freshSolPASS |
-| M8 | checkpoint/m8-record-history | Verified; final diff check, commit, and tag remain |
+| M8 | checkpoint/m8-record-history | Complete; commit 57c1265 tagged checkpoint/m8-record-history |
 
 ## Open limitations
 
