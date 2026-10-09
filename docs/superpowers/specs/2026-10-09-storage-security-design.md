@@ -48,7 +48,7 @@ Require administrator login. Ordinary storage users cannot authenticate to the c
 
 Show capture health, recent network connections, application events, alerts and their evidence, flagged source addresses/accounts, and the current block list. Refresh automatically approximately every two seconds without replacing the whole page.
 
-Show observed addresses and relevant usernames separately. An attempted username does not identify the person sending a request. Display encrypted-record metadata and verification results without decrypting users' content in the console.
+Show observed addresses and relevant usernames separately. An attempted username does not identify the person sending a request. Record cryptographic values and verification results are owner-protected on the storage website; the console displays signed application and network evidence without users' record content (D37).
 
 For a flagged source, offer explicit Block and Unblock actions with CSRF protection. A block denies subsequent requests from that address to the storage website, including requests carrying an already authenticated session. Denied requests are logged. Blocks persist across restarts. These are application access blocks, not operating-system firewall rules: packet capture can still observe a blocked source scanning ports.
 

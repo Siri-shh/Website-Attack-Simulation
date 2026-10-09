@@ -46,18 +46,20 @@ def parse_packet_fields(line: str, *, capture_id: str, domain: str, server_ip: s
 
     src_port = integer(src_port_text, "source port")
     dst_port = integer(dst_port_text, "destination port")
-    syn = integer(syn_text, "SYN flag")
-    ack = integer(ack_text, "ACK flag")
+    def boolean_flag(value: str, name: str) -> bool:
+        if value in ("1", "True"):
+            return True
+        if value in ("0", "False"):
+            return False
+        raise PacketParseError(f"Invalid {name}")
+
+    syn = boolean_flag(syn_text, "SYN flag")
+    ack = boolean_flag(ack_text, "ACK flag")
     tcp_seq_raw = integer(seq_text, "TCP sequence number")
-    if syn not in (0, 1) or ack not in (0, 1):
-        raise PacketParseError("Invalid TCP flags")
     if not retrans_text:
         retransmission = False
     else:
-        retrans = integer(retrans_text, "retransmission flag")
-        if retrans not in (0, 1):
-            raise PacketParseError("Invalid retransmission flag")
-        retransmission = bool(retrans)
+        retransmission = boolean_flag(retrans_text, "retransmission flag")
 
     source_text = src4 or src6
     destination_text = dst4 or dst6

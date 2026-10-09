@@ -37,7 +37,7 @@ select, input { border: 1px solid var(--line); border-radius: .45rem; padding: .
 .metadata-note, .context-note, .refresh-note { color: var(--muted); font-size: .88rem; }
 .metadata-note { padding: .55rem .75rem; border-left: 3px solid #79a5df; background: var(--soft); }
 .context-note { margin: .9rem 0; }
-.table-wrap { overflow-x: auto; }
+.table-wrap { max-height: 32rem; overflow: auto; }
 table { width: 100%; border-collapse: collapse; font-size: .88rem; }
 th, td { padding: .72rem .65rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
 th { color: var(--muted); font-size: .75rem; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }

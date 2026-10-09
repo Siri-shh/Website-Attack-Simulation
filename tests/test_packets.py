@@ -49,6 +49,38 @@ def test_parse_ipv6_incoming_syn():
 
 
 @pytest.mark.parametrize(
+    "syn,ack,retrans",
+    [
+        ("1", "0", "0"),
+        ("True", "False", "False"),
+        ("1", "False", "False"),
+        ("True", "0", "0"),
+    ],
+)
+def test_numeric_and_tshark_text_flags_normalize_identically(syn, ack, retrans):
+    event = parsed(row(syn=syn, ack=ack, retrans=retrans))
+    assert event == parsed(row())
+
+
+@pytest.mark.parametrize("syn,ack", [("True", "True"), ("False", "False")])
+def test_text_true_ack_or_false_syn_is_ignored(syn, ack):
+    assert parsed(row(syn=syn, ack=ack)) is None
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"syn": "2"},
+        {"ack": "Yes"},
+        {"retrans": "maybe"},
+    ],
+)
+def test_malformed_present_tshark_flags_raise(changes):
+    with pytest.raises(PacketParseError):
+        parsed(row(**changes))
+
+
+@pytest.mark.parametrize(
     "line,server",
     [
         (row(ack="1"), SERVER),                         # ACK without SYN
@@ -86,6 +118,14 @@ def test_duplicate_frame_and_syn_retransmission_insert_once(config, keys):
     assert [(item["event_id"], item["capture_id"], item["frame_number"]) for item in stored] == [
         ("cap-a:1", "cap-a", 1)
     ]
+
+
+def test_textual_syn_retransmission_is_deduplicated(config, keys):
+    original = parsed(row(number=10, seq=909, retrans="False"))
+    retransmission = parsed(row(number=11, seq=909, retrans="True"))
+
+    assert insert_packet(config, keys, original) is True
+    assert insert_packet(config, keys, retransmission) is False
 
 
 def test_five_distinct_server_ports_create_actual_r1(config, keys):

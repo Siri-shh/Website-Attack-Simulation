@@ -223,3 +223,58 @@ def test_snapshot_is_allowlisted_bounded_and_live_is_default(config, keys):
     assert len(packet) == 1
     assert packet[0]["signature_valid"] is None
     assert packet[0]["domain"] == "offline:deadbeef"
+
+
+def test_snapshot_keeps_signed_logs_when_newer_packet_rows_exceed_shared_limit(config, keys):
+    _seed(config)
+    with transaction(config) as conn:
+        for i in range(130):
+            append_app_event(conn, keys, {
+                "domain": "live", "event_id": f"{i + 1000:032x}", "time_us": i + 1,
+                "kind": "record_read", "src_ip": "192.0.2.10", "dst_ip": "127.0.0.1",
+                "dst_port": 8443, "username": "bob", "session_ref": "opaque-ref",
+                "record_id": f"{i + 1000:032x}", "outcome": "record_read",
+            })
+            conn.execute(
+                "INSERT INTO events(domain,event_id,time_us,kind,src_ip,dst_ip,dst_port,username,session_ref,record_id,outcome,payload_json,signature_b64,capture_id,frame_number) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                ("live", f"packet-{i}", 1000 + i, "connection_attempt", "192.0.2.20",
+                 "127.0.0.1", 8443, None, None, None, "observed", "{}", None,
+                 "capture-live", i + 1),
+            )
+        conn.execute(
+            "INSERT INTO events(domain,event_id,time_us,kind,src_ip,dst_ip,dst_port,username,session_ref,record_id,outcome,payload_json,signature_b64,capture_id,frame_number) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            ("offline:old", "offline-packet", 2, "connection_attempt", "192.0.2.30",
+             "127.0.0.1", 8443, None, None, None, "observed", "{}", None,
+             "capture-offline", 1),
+        )
+
+    result = snapshot(config, keys)
+    events = result["events"]
+    packets = [event for event in events if event["kind"] == "connection_attempt"]
+    audit = [event for event in events if event["kind"] != "connection_attempt"]
+    assert len(events) == 200
+    assert len(packets) == len(audit) == 100
+    assert [(event["time_us"], event["seq"]) for event in events] == sorted(
+        ((event["time_us"], event["seq"]) for event in events), reverse=True
+    )
+    assert [event["time_us"] for event in packets] == sorted(
+        (event["time_us"] for event in packets), reverse=True
+    )
+    assert [event["time_us"] for event in audit] == sorted(
+        (event["time_us"] for event in audit), reverse=True
+    )
+    assert all(event["signature_valid"] is None for event in packets)
+    assert all(event["signature_valid"] is True for event in audit)
+    assert all(event["domain"] == "live" for event in events)
+    assert set(events[0]) == {
+        "seq", "domain", "event_id", "time_us", "kind", "src_ip", "dst_ip", "dst_port",
+        "username", "session_ref", "record_id", "outcome", "capture_id", "frame_number",
+        "signature_valid", "time_utc",
+    }
+
+    offline = snapshot(config, keys, "offline:old")["events"]
+    assert [event["kind"] for event in offline] == ["connection_attempt"]
+    assert all(event["domain"] == "offline:old" for event in offline)
+    assert offline[0]["signature_valid"] is None

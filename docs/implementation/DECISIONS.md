@@ -67,3 +67,23 @@ Independent Sol review found serve handled KeyboardInterrupt but not Docker stop
 ## D33 — Client container stays available with finite sleeps
 
 Independent Sol review and controller Python reproduction confirmed time.sleep(float('inf')) raises OverflowError rather than keeping the client alive. Prescribed Luna correction is a while True loop with time.sleep(3600), represented with actual Python newlines inside the JSON CMD. Keep client independent; actual container liveness verified at T20.
+
+## D34 — Bridge network for localhost publication
+
+Actual Docker deployment: Internal=true network produced empty published port arrays and host HTTPS connection refusal despite healthy server and running capture. Sol checked current Docker official docs: use the normal user-defined bridge by removing only internal:true, preserving subnet172.29.0/24, static .10/.20, eth0 and loopback-only published ports. Recreate only this Compose project without volumes/reset; preserve data. Bridge permits outbound traffic; host ingress remains localhost-only. Do not claim a Docker29-specific regression without supporting release evidence. Controller real SIGTERM stop succeeded, server.pid removed and PCAP retained.
+
+## D35 — Real TShark Boolean field compatibility
+
+Root TShark4.4.19 actual PCAP emits True/False for SYN/ACK; numeric-only parsing rejects valid connections. Sol fixed contract: flag accepts exact 1/True and 0/False tokens, rejects every other present token; apply SYN, ACK and nonempty retransmission, empty retransmission remains False. Preserve all incoming server/SYN-without-ACK scope, missing fields and dedup semantics. Luna performs predetermined correction after regression red; root reruns packet/capture/pcap then rebuilds and verifies real harmless client observation before probing.
+
+## D36 — Smoke restart evidence and browser artifacts
+
+Sol test-only Docker smoke adds --state (default /tmp/storage-smoke-evidence.json), --retain-block and --verify-restart. Standard smoke demonstrates unblock then optionally deliberately re-blocks its observed client IP, saving only public record crypto/timing/timestamps and event/alert IDs. After controller stop/read/import/restart, verification proves retained block/evidence, then admin unblocks and normal login resumes. No server lifecycle commands in the client test. Browser QA uses Playwright CLI fallback after in-app browser initialization failed; isolated QA context accepts lab self-signed certificate, while actual host/client HTTPS was independently CA-verified. Generated browser outputs stay untracked.
+
+## D37 — Storage-only record cryptographic evidence
+
+Fresh Sol review reconciled stale spec text against latest explicit user steering (crypto values/timings in storage website itself, separate admin log-monitor console, do not overbuild) and approved T11/T12 snapshot contract. Record ciphertext/hash/signature/timings remain owner-protected on storage. Console presents signed audit and network evidence, not an additional encrypted-record metadata surface. Update stale specification sentence accordingly; no new admin record endpoint/table.
+
+## D38 — Preserve application logs under packet traffic
+
+Actual browser polling creates network observations; mixed newest100 events eventually showed100 network/0 application events despite persisted signed logs. Fresh Sol specifies independent per-domain newest100 application and newest100 connection_attempt quotas, combined deterministically sorted(time_us,seq)descending in existing events key (up to200), existing signature_valid allowlist unchanged. Add regression packet flood cannot evict signed logs, bothbounds100, domainisolation and signatures intact. Bound table-wrap height with overflow:auto so allrowsremaininspectable andalerts/blockcontrolsreachable. No filtering out admin traffic, no detector or schema changes.

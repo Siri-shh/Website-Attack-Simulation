@@ -54,10 +54,21 @@ def snapshot(config: Config, keys: KeyRing, domain: str = "live") -> dict:
             "SELECT DISTINCT domain FROM events UNION SELECT DISTINCT domain FROM alerts"
         ))
         capture = _capture_status(conn)
-        event_rows = conn.execute(
-            "SELECT * FROM events WHERE domain=? ORDER BY time_us DESC,seq DESC LIMIT 100",
-            (domain,),
+        packet_rows = conn.execute(
+            "SELECT * FROM events WHERE domain=? AND kind=? "
+            "ORDER BY time_us DESC,seq DESC LIMIT ?",
+            (domain, "connection_attempt", 100),
         ).fetchall()
+        audit_rows = conn.execute(
+            "SELECT * FROM events WHERE domain=? AND kind!=? "
+            "ORDER BY time_us DESC,seq DESC LIMIT ?",
+            (domain, "connection_attempt", 100),
+        ).fetchall()
+        event_rows = sorted(
+            (*packet_rows, *audit_rows),
+            key=lambda row: (row["time_us"], row["seq"]),
+            reverse=True,
+        )
         events = []
         for row in event_rows:
             item = {field: row[field] for field in _EVENT_FIELDS}

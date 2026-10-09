@@ -2,17 +2,17 @@
 
 Plan: `docs/superpowers/plans/2026-10-09-storage-security-plan.md`
 Spec: `docs/superpowers/specs/2026-10-09-storage-security-design.md`
-Status: **IMPLEMENTING**
+Status: **COMPLETE**
 Execution approval: user's “continue” on 9 October 2026 authorizes the written plan and selected Luna/Sol delegation.
-Current milestone: M7 external clients, walkthrough and verified delivery.
-Next action: Controller M6 commit/tag then T18 attacker client.
-Current task base commit: `fbefbeca8397e94b69930632d4ecd40ba6317017`.
-Current task phase: T17 M6 verified and reviewed; Sol finalPASS; compose0 two services; D33syntaxPASS.
+Current milestone: M7 complete; all implementation tasks verified and reviewed.
+Next action: No implementation tasks remain. Use README/DEMO; keep this checkout including .git and preserve runtime data/keys separately. Physical LAN hardware verification remains documented.
+Current task base commit: `d3e161e7989e98fc8ff52fa3645851d2d8b2d5a5`.
+Current task phase: T20 verified complete; M7 checkpoint; finalsuite317pass1skip112.83s; Node1pass; freshSolPASS; realDocker/browserPASS.
 Current branch: `feature/storage-security`.
 Initial design commit: `7b1e53c`.
 Planning checkpoint: Git tag `checkpoint/m0-plan` once this documentation is committed.
 
-Planning checkpoint is committed and tagged. The virtual environment and locked dependencies are installed. Controller verified T01 red: three tests failed with intended NotImplementedError; no collection errors. No runtime keys or databases exist. Planning used GPT-6.1 Sol reasoning agents; their contracts are frozen in the plan and DECISIONS, so those agents do not need to survive.
+Historical M0/M1 preparation: planning checkpoint is committed and tagged. The virtual environment and locked dependencies are installed. Controller verified T01 red: three tests failed with intended NotImplementedError; no collection errors. At that historical checkpoint no runtime keys or databases existed. Runtime data and keys now exist under ignored data/ and are preserved. Planning used GPT-6.1 Sol reasoning agents; their contracts are frozen in the plan and DECISIONS, so those agents do not need to survive.
 
 ## Task ledger
 
@@ -30,14 +30,14 @@ Planning checkpoint is committed and tagged. The virtual environment and locked 
 | T10 | M4 | gpt-6.1-sol | COMPLETE | rules21 passed3.02s; independent Sol PASS; audit/storage113 passed207.90s |
 | T11 | M4 | gpt-6-luna | COMPLETE | M4 final Sol PASS; requiredsuite33 pass; D27 Node1/UI5 pass |
 | T12 | M4 | gpt-6-luna | COMPLETE | M4 final Sol PASS; requiredsuite33 pass; D27 Node1/UI5 pass |
-| T13 | M5 | gpt-6-luna | COMPLETE | M5 Sol PASS; combined47 passed6.67s |
+| T13 | M5 | gpt-6-luna | COMPLETE | 36pass4.03s SolPASS realSYNcapturedR1 |
 | T14 | M5 | gpt-6.1-sol | COMPLETE | M5 Sol PASS; combined47 passed6.67s |
 | T15 | M5 | gpt-6.1-sol | COMPLETE | M5 Sol PASS; combined47 passed6.67s |
 | T16 | M6 | gpt-6.1-sol | COMPLETE | Sol finalPASS; CLI28pass1skip18.64s |
 | T17 | M6 | gpt-6-luna | COMPLETE | Sol finalPASS; compose0 two services; D33syntaxPASS |
-| T18 | M7 | gpt-6-luna | TODO | none |
-| T19 | M7 | gpt-6-luna | TODO | none |
-| T20 | M7 | gpt-6.1-sol | TODO | none |
+| T18 | M7 | gpt-6-luna | COMPLETE | client8pass0.30s; T18/D34SolPASS |
+| T19 | M7 | gpt-6-luna | COMPLETE | Sol finalPASS; CLI/help/actualDockercommandschecked |
+| T20 | M7 | gpt-6.1-sol | COMPLETE | finalsuite317pass1skip112.83s; Node1pass; freshSolPASS; realDocker/browserPASS |
 
 ## Update protocol
 
@@ -60,10 +60,12 @@ At each milestone, stage the changed code/tests and all updated durable document
 | M4 | checkpoint/m4-console | verified33 tests plusD27 Node1/UI5; finalSolPASS; tag identifies completion commit |
 | M5 | checkpoint/m5-capture | verified47 passed6.67s; Sol PASS; tag identifies completion commit |
 | M6 | checkpoint/m6-deployment | verifiedCLI28pass1skip; compose0; Sol finalPASS; tag identifies commit |
-| M7 | checkpoint/m7-ready | not started |
+| M7 | checkpoint/m7-ready | verified317pass1Windows-skip (same test LinuxPASS), NodePASS, actualDocker/browser/replay/restart, freshSolPASS |
 
 ## Open limitations
 
 The actual two-physical-computer LAN test requires a second computer. Local configuration tests cannot replace that test; report the distinction when delivering the project.
 
 Historical interruption: the T11 worker hit the workspace spend cap; work was saved at dcff01c. The user resumed and T12 Luna/Sol workers now run successfully. No model substitution was made.
+
+Completion: Docker server/client remain running and healthy; storage8443/admin8444 bindlocalhost. All checkpoint tags M0–M7 preserve local history on feature/storage-security. No push/merge/reset or removal of runtime records/history was performed. T20 transient Sol spend cap recovered through the same required Sol model; no substitution.
