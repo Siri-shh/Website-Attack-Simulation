@@ -104,3 +104,6 @@ GPT-6.1 Sol design review approved the empirical boundaries and corrected the cl
 
 
 D42 ? T22 scope narrowed by user: Safe tamper is on hold and is excluded from M9. The active Analysis page has only three panels: AES-GCM timing/evidence, full SHA-256 property analysis, and AES confusion/diffusion/avalanche. Retain D40/D41 as historical design notes; their Safe tamper details are deferred and are not implementation requirements.
+
+
+D43 ? T23 analysis result contract: use Sol?s nested result dictionaries in the T23 plan update, preserving raw nanoseconds and unrounded statistics. `candidate_limit` must be an integer in [1, 10000], explicitly rejecting bool and out-of-range values; each hash-property budget is independent. Inject private `_digest`, `_random_bytes`, and `_now_ns` seams so tests can prove full-digest success/collision/exhaustion deterministically without expensive searches. AES-primitive bit index 0 is the MSB of byte 0; SAC matrix rows are plaintext input bits and columns ciphertext output bits.
