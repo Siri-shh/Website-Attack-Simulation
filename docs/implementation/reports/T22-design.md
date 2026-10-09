@@ -7,3 +7,8 @@
 - **Sol consultation:** GPT-6.1 Sol (high) found no remaining material ambiguity and returned the exact algorithms/counts captured in D41/spec. Controller retained 10,000 candidates per SHA-256 property as stated in its approved proposal; Sol suggested 1,024, which was not a user-approved change and is not adopted. Sol confirmed expected no-match behavior is illustrative only and that a generic collision search is about 2^128 despite the 256-bit digest.
 - **TDD / product checks:** Not applicable yet; this task is at the architectural design gate and no product code has been written.
 - **Next:** Self-review and commit the spec checkpoint, ask user to review the committed spec. After approval, invoke `writing-plans` and request review/selection before implementation.
+
+
+## Scope supersession (2026-10-10)
+
+The user subsequently put Safe tamper on hold. This review remains useful for the three cryptography-analysis panels only; Safe tamper recommendations below are historical and excluded from the active M9 scope.
