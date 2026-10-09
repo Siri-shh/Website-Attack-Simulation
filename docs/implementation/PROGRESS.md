@@ -4,10 +4,10 @@ Plan: `docs/superpowers/plans/2026-10-09-storage-security-plan.md`
 Spec: `docs/superpowers/specs/2026-10-09-storage-security-design.md`
 Status: **IMPLEMENTING**
 Execution approval: user's “continue” on 9 October 2026 authorizes the written plan and selected Luna/Sol delegation.
-Current milestone: M3 storage website.
-Next action: commit/tag verified M2, then T06 record-service tests.
-Current task base commit: `34ac77aa4dd0081ab8e9600ba6ea71d632c7d72c`.
-Current task phase: M2 complete; full suite168 passed21.61s and independent M2 Sol PASS. M1 committed/tagged; 25 checks passed and Sol review PASS.
+Current milestone: M4 detection and separate admin console.
+Next action: Commit/tag M3 then T10 Sol deterministic SQL rules tests.
+Current task base commit: `8e783d47e48b824f7537d43052cd509bebb8c08f`.
+Current task phase: T09 complete; M3 Sol PASS; full suite209 passed42.17s.
 Current branch: `feature/storage-security`.
 Initial design commit: `7b1e53c`.
 Planning checkpoint: Git tag `checkpoint/m0-plan` once this documentation is committed.
@@ -23,10 +23,10 @@ Planning checkpoint is committed and tagged. The virtual environment and locked 
 | T03 | M2 | gpt-6.1-sol | COMPLETE | identity30 passed5.22s; T03-review.md PASS |
 | T04 | M2 | gpt-6.1-sol | COMPLETE | crypto41 passed5.23s; T04-review.md PASS |
 | T05 | M2 | gpt-6.1-sol | COMPLETE | audit72 passed10.14s; M2-review.md PASS |
-| T06 | M3 | gpt-6.1-sol | TODO | none |
-| T07 | M3 | gpt-6-luna | TODO | none |
-| T08 | M3 | gpt-6-luna | TODO | none |
-| T09 | M3 | gpt-6-luna | TODO | none |
+| T06 | M3 | gpt-6.1-sol | COMPLETE | records20 passed7.45s; T06-review.md PASS |
+| T07 | M3 | gpt-6-luna | COMPLETE | M3 Sol PASS; full suite209 passed42.17s |
+| T08 | M3 | gpt-6-luna | COMPLETE | M3 Sol PASS; full suite209 passed42.17s |
+| T09 | M3 | gpt-6-luna | COMPLETE | M3 Sol PASS; full suite209 passed42.17s |
 | T10 | M4 | gpt-6.1-sol | TODO | none |
 | T11 | M4 | gpt-6-luna | TODO | none |
 | T12 | M4 | gpt-6-luna | TODO | none |
@@ -56,7 +56,7 @@ At each milestone, stage the changed code/tests and all updated durable document
 | M0 | checkpoint/m0-plan | documentation verified; the tag identifies the planning snapshot |
 | M1 | checkpoint/m1-foundation | verified; checkpoint tag identifies the completion commit |
 | M2 | checkpoint/m2-crypto | verified; full suite168 passed21.61s; Sol PASS; checkpoint tag identifies commit |
-| M3 | checkpoint/m3-storage | not started |
+| M3 | checkpoint/m3-storage | verified209 passed42.17s; independent Sol PASS; checkpoint tag identifies commit |
 | M4 | checkpoint/m4-console | not started |
 | M5 | checkpoint/m5-capture | not started |
 | M6 | checkpoint/m6-deployment | not started |

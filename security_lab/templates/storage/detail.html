@@ -1,0 +1,50 @@
+{% extends "storage/base.html" %}
+{% block title %}{{ plaintext.title }}{% endblock %}
+{% block content %}
+  <div class="detail-topline">
+    <a class="back-link" href="{{ url_for('storage_list') }}">← All records</a>
+    <a class="button button-secondary" href="{{ url_for('edit_record', record_id=record.id) }}">Edit record</a>
+  </div>
+  <article class="detail-heading">
+    <p class="eyebrow">Record · version {{ record.version }}</p>
+    <h1>{{ plaintext.title }}</h1>
+    <div class="record-body">{{ plaintext.body }}</div>
+    <dl class="record-dates">
+      <div><dt>Created</dt><dd><time datetime="{{ record.created_at_us | utc }}">{{ record.created_at_us | utc }}</time></dd></div>
+      <div><dt>Updated</dt><dd><time datetime="{{ record.updated_at_us | utc }}">{{ record.updated_at_us | utc }}</time></dd></div>
+      <div><dt>Evidence generated</dt><dd><time datetime="{{ record.generated_at_us | utc }}">{{ record.generated_at_us | utc }}</time></dd></div>
+    </dl>
+  </article>
+
+  <section class="evidence-panel" aria-labelledby="evidence-title">
+    <div class="section-heading"><div><p class="eyebrow">Verified for this account</p><h2 id="evidence-title">Cryptographic evidence</h2></div><span class="status-badge">{% if verified %}Verified{% else %}Unverified{% endif %}</span></div>
+    <p class="lede">The encrypted envelope is checked before this record is decrypted and displayed.</p>
+    <div class="evidence-grid">
+      <div class="evidence-item evidence-wide"><h3>Ciphertext · Base64</h3><pre class="evidence-value">{{ record.ciphertext_b64 }}</pre></div>
+      <div class="evidence-item"><h3>Nonce · Base64</h3><pre class="evidence-value">{{ record.nonce_b64 }}</pre></div>
+      <div class="evidence-item"><h3>SHA-256 hash · hexadecimal</h3><pre class="evidence-value">{{ record.sha256_hex }}</pre><p class="verification-state">{% if verified %}Envelope hash verification passed{% else %}Envelope hash not verified{% endif %}</p></div>
+      <div class="evidence-item evidence-wide"><h3>Ed25519 digital signature · Base64</h3><pre class="evidence-value">{{ record.signature_b64 }}</pre><p class="verification-state">{% if verified %}Digital signature verification passed{% else %}Digital signature not verified{% endif %}</p></div>
+    </div>
+  </section>
+
+  <section class="performance-panel" aria-labelledby="performance-title">
+    <p class="eyebrow">Saved with version {{ record.version }}</p>
+    <h2 id="performance-title">Measured operation durations for this saved version</h2>
+    <p class="lede">Individual operation measurements on this machine. These values are not a general benchmark or proof of security.</p>
+    <dl class="input-sizes">
+      <div><dt>Plaintext input</dt><dd>{{ record.plaintext_bytes }} bytes</dd></div>
+      <div><dt>Ciphertext</dt><dd>{{ record.ciphertext_bytes }} bytes</dd></div>
+      <div><dt>Signed envelope</dt><dd>{{ record.envelope_bytes }} bytes</dd></div>
+    </dl>
+    {% set max_duration = [1, record.encryption_ns, record.hashing_ns, record.signing_ns] | max %}
+    <table class="timing-table">
+      <caption>Time spent in each generation operation</caption>
+      <thead><tr><th scope="col">Operation</th><th scope="col">Duration</th><th scope="col">Relative scale</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">AES-256-GCM encryption</th><td>{{ "%.6f" | format(record.encryption_ns / 1000000) }} ms</td><td><div class="timing-track" role="img" aria-label="Encryption duration bar"><span class="timing-bar" style="width: {{ 100 * record.encryption_ns / max_duration }}%"></span></div></td></tr>
+        <tr><th scope="row">SHA-256 hashing</th><td>{{ "%.6f" | format(record.hashing_ns / 1000000) }} ms</td><td><div class="timing-track" role="img" aria-label="Hashing duration bar"><span class="timing-bar timing-bar-secondary" style="width: {{ 100 * record.hashing_ns / max_duration }}%"></span></div></td></tr>
+        <tr><th scope="row">Ed25519 signing</th><td>{{ "%.6f" | format(record.signing_ns / 1000000) }} ms</td><td><div class="timing-track" role="img" aria-label="Signing duration bar"><span class="timing-bar timing-bar-tertiary" style="width: {{ 100 * record.signing_ns / max_duration }}%"></span></div></td></tr>
+      </tbody>
+    </table>
+  </section>
+{% endblock %}

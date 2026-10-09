@@ -259,10 +259,10 @@ git status --short
 **Owned:** `security_lab/records.py`, `tests/test_records.py`.
 **Interfaces:** save_record/list_records/read_record and errors above; read services require source/session context. Seed users in tests using explicit scrypt hashes, not launcher dependency.
 
-- [ ] Write tests asserting create version1, edit version2 with preserved creation timestamp/new updated timestamp and nonce; inject wall-clock values1000000/2000000us rather than sleeping. Only latest row exists; Bob listing excludes Alice; foreign existing access raises RecordDenied and persists exactly one signed foreign_record_denied event; missing ID is RecordMissing, not foreign denial.
-- [ ] Assert integrity failure returns no plaintext, persists integrity_failure, and does not overwrite bad record. Concurrent updates serialize and obtain distinct increasing versions. Failed save leaves neither partial ciphertext nor a success event.
-- [ ] Controller runs `& $labPy -m pytest tests/test_records.py -q` for red, then after implementation for PASS.
-- [ ] Sol reviewer checks transaction/error commit ordering before routes consume it.
+- [x] Write tests asserting create version1, edit version2 with preserved creation timestamp/new updated timestamp and nonce; inject wall-clock values1000000/2000000us rather than sleeping. Only latest row exists; Bob listing excludes Alice; foreign existing access raises RecordDenied and persists exactly one signed foreign_record_denied event; missing ID is RecordMissing, not foreign denial.
+- [x] Assert integrity failure returns no plaintext, persists integrity_failure, and does not overwrite bad record. Concurrent updates serialize and obtain distinct increasing versions. Failed save leaves neither partial ciphertext nor a success event.
+- [x] Controller runs `& $labPy -m pytest tests/test_records.py -q` for red, then after implementation for PASS.
+- [x] Sol reviewer checks transaction/error commit ordering before routes consume it.
 
 ### Task T07: Shared login, CSRF and storage admission
 
@@ -270,11 +270,11 @@ git status --short
 **Owned:** `security_lab/auth.py`, `security_lab/templates/login.html`, `tests/test_auth.py`.
 **Interfaces:** configure_auth/require_login/csrf helpers above. Tests construct tiny Flask apps with this module and a protected test route, avoiding dependency on T08/T11.
 
-- [ ] Write tests: correct Bob credentials authenticate user app; admin cannot authenticate user app; Bob cannot authenticate admin app; invalid/missing CSRF gives400, valid wrong password gives401 and login_failure, correct gives303/login_success with new session_ref. Failure clears any old authenticated identity.
-- [ ] Assert separate cookie names/secrets reject cross-app sessions; storage blocked peer gives403 even after prior login; forged X-Forwarded-For cannot bypass block; admin site unaffected. Use test_client base_url=https://localhost and actual REMOTE_ADDR overrides.
-- [ ] Controller runs `& $labPy -m pytest tests/test_auth.py -q` for red.
-- [ ] Implement exact role/session/CSRF/admission behavior and minimal standalone escaped login template.
-- [ ] Controller reruns; expected PASS.
+- [x] Write tests: correct Bob credentials authenticate user app; admin cannot authenticate user app; Bob cannot authenticate admin app; invalid/missing CSRF gives400, valid wrong password gives401 and login_failure, correct gives303/login_success with new session_ref. Failure clears any old authenticated identity.
+- [x] Assert separate cookie names/secrets reject cross-app sessions; storage blocked peer gives403 even after prior login; forged X-Forwarded-For cannot bypass block; admin site unaffected. Use test_client base_url=https://localhost and actual REMOTE_ADDR overrides.
+- [x] Controller runs `& $labPy -m pytest tests/test_auth.py -q` for red.
+- [x] Implement exact role/session/CSRF/admission behavior and minimal standalone escaped login template.
+- [x] Controller reruns; expected PASS.
 
 ### Task T08: Storage app factory and regular routes
 
@@ -282,10 +282,10 @@ git status --short
 **Owned:** `security_lab/storage.py`, `tests/test_storage.py`, `tests/conftest.py` (append `storage_app`/`storage_client` fixtures using temporary config/keys and seeded test users).
 **Interfaces:** `create_storage_app(config: Config, keys: KeyRing) -> Flask`. Routes `/` GET list, `/records/new` GET/POST create, `/records/<id>` GET detail, `/records/<id>/edit` GET/POST edit; configure_auth required_role='user'. Successful save redirects303 to detail. Render `storage/list.html` with `records`; `storage/form.html` with `form={title,body}`, `record_id` (None when new) and optional `error`; `storage/detail.html` with `record` (stored row), `plaintext={title,body}`, `verified=True`; errors with `message`. Always pass `csrf_token` string and `username` to templates. POST names are title/body/csrf_token. Integrity error409, foreign403, missing404, invalid form400. No console/scenario/attack endpoints.
 
-- [ ] Write route tests: unauthenticated redirects login, create/edit with valid CSRF yields303, GET evidence uses read_record, forged foreign URLs return403 for view and edit, missing ID404, absent CSRF400, oversized payload413.
-- [ ] Controller runs `& $labPy -m pytest tests/test_storage.py -q` for red.
-- [ ] Implement routes against frozen services; no duplicated crypto or custom detector calls. Minimal templates needed for first green are owned by T09, so supply template stubs through tests using DictLoader until T09 completes.
-- [ ] Controller reruns; expected PASS.
+- [x] Write route tests: unauthenticated redirects login, create/edit with valid CSRF yields303, GET evidence uses read_record, forged foreign URLs return403 for view and edit, missing ID404, absent CSRF400, oversized payload413.
+- [x] Controller runs `& $labPy -m pytest tests/test_storage.py -q` for red.
+- [x] Implement routes against frozen services; no duplicated crypto or custom detector calls. Minimal templates needed for first green are owned by T09, so supply template stubs through tests using DictLoader until T09 completes.
+- [x] Controller reruns; expected PASS.
 
 ### Task T09: Owner record UI and measured performance view
 
@@ -293,10 +293,10 @@ git status --short
 **Owned:** `security_lab/templates/storage/base.html`, `list.html`, `form.html`, `detail.html`, `error.html`, `security_lab/static/storage.css`, `tests/test_storage_ui.py` (template filenames all under storage/).
 **Interfaces:** T08 passes record row, decrypted title/body, CSRF, and verified status. Server-render full Base64 ciphertext/nonce/signature and hexadecimal hash in selectable wrapping text; long values never truncated. Show version/created/updated/generated UTC times and labels SHA-256 hash / Ed25519 signature. Show bytes for plaintext/ciphertext/envelope and durations `ns/1_000_000`, formatted to six decimals ms.
 
-- [ ] Write HTML tests: owner sees exact stored ciphertext/hash/signature; title `<script>` renders escaped; foreign evidence stays inaccessible. Inject metrics60/20/50ns and assert visible `0.000060`, `0.000020`, `0.000050` ms. Refresh twice leaves nonce/signature/metrics unchanged; GET never calls seal_record.
-- [ ] Controller runs `& $labPy -m pytest tests/test_storage_ui.py -q` for red.
-- [ ] Implement straightforward login/list/create/edit/navigation and a detail evidence section. Performance view is a numeric three-row table plus three CSS bars scaled to the largest duration (zero denominator guarded). Label input sizes and Ã¢â‚¬Å“Measured operation durations for this saved versionÃ¢â‚¬Â; no fabricated speed superiority or experiment runner.
-- [ ] Controller reruns; expected PASS; browser inspection occurs at T20 rather than a redundant layout test suite.
+- [x] Write HTML tests: owner sees exact stored ciphertext/hash/signature; title `<script>` renders escaped; foreign evidence stays inaccessible. Inject metrics60/20/50ns and assert visible `0.000060`, `0.000020`, `0.000050` ms. Refresh twice leaves nonce/signature/metrics unchanged; GET never calls seal_record.
+- [x] Controller runs `& $labPy -m pytest tests/test_storage_ui.py -q` for red.
+- [x] Implement straightforward login/list/create/edit/navigation and a detail evidence section. Performance view is a numeric three-row table plus three CSS bars scaled to the largest duration (zero denominator guarded). Label input sizes and Ã¢â‚¬Å“Measured operation durations for this saved versionÃ¢â‚¬Â; no fabricated speed superiority or experiment runner.
+- [x] Controller reruns; expected PASS; browser inspection occurs at T20 rather than a redundant layout test suite.
 
 **M3 review/checkpoint Ã¢â‚¬â€ controller:** Sol reviews auth/routes/UI and their interaction with T06, focusing on owner-only evidence, independent cookies and real timings. Run records/auth/storage/storage_ui tests and diff check, update records, then:
 

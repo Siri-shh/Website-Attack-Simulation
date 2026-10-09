@@ -1,0 +1,10 @@
+{% extends "storage/base.html" %}
+{% block title %}Storage request error{% endblock %}
+{% block content %}
+  <section class="empty-state error-state" role="alert">
+    <p class="eyebrow">Storage request</p>
+    <h1>{{ error or "We could not complete that request" }}</h1>
+    <p>Your record was not displayed. Return to your record list and try again.</p>
+    <a class="button button-primary" href="{{ url_for('storage_list') }}">Back to my records</a>
+  </section>
+{% endblock %}

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Storage{% endblock %} · Secure Storage</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='storage.css') }}">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="{{ url_for('storage_list') }}">Secure Storage</a>
+      <nav aria-label="Main navigation">
+        <a href="{{ url_for('storage_list') }}">My records</a>
+        <a href="{{ url_for('new_record') }}">New record</a>
+        <form class="nav-logout" method="post" action="{{ url_for('logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="nav-button" type="submit">Sign out {{ username }}</button>
+        </form>
+      </nav>
+    </header>
+    <main class="page-shell">
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="flash-list" role="status">
+            {% for message in messages %}<p class="flash">{{ message }}</p>{% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="site-footer">Private records are encrypted and checked before they are shown.</footer>
+  </body>
+</html>

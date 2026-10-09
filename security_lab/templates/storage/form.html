@@ -1,0 +1,23 @@
+{% extends "storage/base.html" %}
+{% block title %}{% if record_id %}Edit record{% else %}New record{% endif %}{% endblock %}
+{% block content %}
+  <section class="form-panel">
+    <a class="back-link" href="{% if record_id %}{{ url_for('record_detail', record_id=record_id) }}{% else %}{{ url_for('storage_list') }}{% endif %}">← Back</a>
+    <p class="eyebrow">Private text record</p>
+    <h1>{% if record_id %}Edit record{% else %}Create a record{% endif %}</h1>
+    <p class="lede">Your title and text are encrypted when you save.</p>
+    {% if error %}<p class="error-message" role="alert">{{ error }}</p>{% endif %}
+    <form class="record-form" method="post" action="{% if record_id %}{{ url_for('edit_record', record_id=record_id) }}{% else %}{{ url_for('new_record') }}{% endif %}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label for="title">Title</label>
+      <input id="title" name="title" type="text" maxlength="120" required value="{{ form.title }}" autocomplete="off">
+      <label for="body">Text</label>
+      <textarea id="body" name="body" rows="12" maxlength="10000" required>{{ form.body }}</textarea>
+      <p class="field-note">Maximum 120 characters for the title and 10,000 for the text.</p>
+      <div class="form-actions">
+        <button class="button button-primary" type="submit">{% if record_id %}Save changes{% else %}Save record{% endif %}</button>
+        <a class="button button-secondary" href="{% if record_id %}{{ url_for('record_detail', record_id=record_id) }}{% else %}{{ url_for('storage_list') }}{% endif %}">Cancel</a>
+      </div>
+    </form>
+  </section>
+{% endblock %}
