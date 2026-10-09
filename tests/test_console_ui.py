@@ -1,4 +1,4 @@
-"""Packaged live admin console page contracts for T12."""
+﻿"""Packaged live admin console page contracts for T12."""
 
 from pathlib import Path
 import re
@@ -9,6 +9,7 @@ from jinja2 import FileSystemLoader
 from security_lab.audit import append_app_event
 from security_lab.db import transaction
 from security_lab.console import create_console_app
+from security_lab.config import format_ist
 from werkzeug.security import generate_password_hash
 
 
@@ -101,7 +102,7 @@ def test_empty_and_degraded_capture_states_are_visible(real_console_client, conf
     with transaction(config) as conn:
         conn.execute(
             "INSERT INTO status(key,value_json) VALUES('capture',?)",
-            ('{"state":"degraded","error":"adapter unavailable"}',),
+            ('{"state":"degraded","error":"adapter unavailable","last_packet_at_us":1000001}',),
         )
 
     page = real_console_client.get("/", base_url="https://localhost")
@@ -109,6 +110,8 @@ def test_empty_and_degraded_capture_states_are_visible(real_console_client, conf
     html = page.get_data(as_text=True).lower()
     assert "degraded" in html
     assert "adapter unavailable" in html
+    assert "last packet (ist)" in html
+    assert "1970-01-01t05:30:01.000001+05:30" in html
     assert re.search(r"(no|empty|none).*(event|alert|block)|(event|alert|block).*(no|empty|none)", html)
 
 
@@ -130,6 +133,8 @@ def test_malicious_username_is_escaped_and_dynamic_rendering_uses_text_content(
     html = page.get_data(as_text=True)
     assert hostile not in html
     assert "&lt;img src=x onerror=alert(1)&gt;" in html
+    assert "Time (IST)" in html
+    assert format_ist(10) in html
 
     script = (_STATIC_ROOT / "console.js").read_text(encoding="utf-8")
     assert "textContent" in script

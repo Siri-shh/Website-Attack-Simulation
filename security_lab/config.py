@@ -108,6 +108,13 @@ def format_utc(value_us: int) -> str:
     return instant.isoformat(timespec="microseconds").replace("+00:00", "Z")
 
 
+def format_ist(value_us: int) -> str:
+    instant = datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(microseconds=value_us)
+    return instant.astimezone(timezone(timedelta(hours=5, minutes=30))).isoformat(
+        timespec="microseconds"
+    )
+
+
 def normalize_ip(value: str) -> str:
     address = ipaddress.ip_address(value)
     if isinstance(address, ipaddress.IPv6Address) and address.ipv4_mapped is not None:

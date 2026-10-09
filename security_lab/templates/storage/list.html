@@ -11,7 +11,7 @@
         <article class="record-card">
           <div class="record-card-copy">
             <h2><a href="{{ url_for('record_detail', record_id=record.id) }}">{{ record.title }}</a></h2>
-            <p>Version {{ record.version }} · Updated <time datetime="{{ record.updated_at_us | utc }}">{{ record.updated_at_us | utc }}</time></p>
+            <p>Version {{ record.version }} · Updated (IST) <time datetime="{{ record.updated_at_us | ist }}">{{ record.updated_at_us | ist }}</time></p>
           </div>
           <a class="text-link" href="{{ url_for('record_detail', record_id=record.id) }}">View evidence <span aria-hidden="true">→</span></a>
         </article>

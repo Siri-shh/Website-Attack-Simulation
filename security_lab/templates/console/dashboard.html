@@ -46,8 +46,8 @@
         <p id="capture-error" class="capture-error">{% if snapshot.capture.error %}{{ snapshot.capture.error }}{% else %}No capture error reported.{% endif %}</p>
       </div>
       <div class="capture-meta">
-        <span>Last packet</span>
-        <time id="last-packet">{% if snapshot.capture.last_packet_at_us %}{{ snapshot.capture.last_packet_at_us|utc }}{% else %}No packets observed{% endif %}</time>
+        <span>Last packet (IST)</span>
+        <time id="last-packet">{% if snapshot.capture.last_packet_at_us %}{{ snapshot.capture.last_packet_at_ist }}{% else %}No packets observed{% endif %}</time>
       </div>
     </section>
 
@@ -57,8 +57,8 @@
       <div id="attempts-list" class="table-wrap">
         {% set attempts = snapshot.events|selectattr('kind', 'equalto', 'connection_attempt')|list %}
         {% if attempts %}
-          <table><thead><tr><th>Time (UTC)</th><th>Source address</th><th>Destination</th><th>Port</th><th>Observed domain</th></tr></thead><tbody>
-          {% for event in attempts %}<tr><td>{{ event.time_utc }}</td><td>{{ event.src_ip or 'Unknown' }}</td><td>{{ event.dst_ip or 'Unknown' }}</td><td>{{ event.dst_port or '—' }}</td><td>{{ event.domain }}</td></tr>{% endfor %}
+          <table><thead><tr><th>Time (IST)</th><th>Source address</th><th>Destination</th><th>Port</th><th>Observed domain</th></tr></thead><tbody>
+          {% for event in attempts %}<tr><td>{{ event.time_ist }}</td><td>{{ event.src_ip or 'Unknown' }}</td><td>{{ event.dst_ip or 'Unknown' }}</td><td>{{ event.dst_port or '—' }}</td><td>{{ event.domain }}</td></tr>{% endfor %}
           </tbody></table>
         {% else %}<p class="empty-state">No connection attempts in this domain.</p>{% endif %}
       </div>
@@ -69,8 +69,8 @@
       <div id="events-list" class="table-wrap">
         {% set app_events = snapshot.events|rejectattr('kind', 'equalto', 'connection_attempt')|list %}
         {% if app_events %}
-          <table><thead><tr><th>Time (UTC)</th><th>Event</th><th>Source</th><th>Account context</th><th>Signature</th></tr></thead><tbody>
-          {% for event in app_events %}<tr><td>{{ event.time_utc }}</td><td>{{ event.kind }}</td><td>{{ event.src_ip or 'Unknown' }}</td><td>{{ event.username or 'Not provided' }}</td><td>{% if event.signature_valid %}<span class="status-good">Valid</span>{% else %}<span class="status-bad">Invalid</span>{% endif %}</td></tr>{% endfor %}
+          <table><thead><tr><th>Time (IST)</th><th>Event</th><th>Source</th><th>Account context</th><th>Signature</th></tr></thead><tbody>
+          {% for event in app_events %}<tr><td>{{ event.time_ist }}</td><td>{{ event.kind }}</td><td>{{ event.src_ip or 'Unknown' }}</td><td>{{ event.username or 'Not provided' }}</td><td>{% if event.signature_valid %}<span class="status-good">Valid</span>{% else %}<span class="status-bad">Invalid</span>{% endif %}</td></tr>{% endfor %}
           </tbody></table>
         {% else %}<p class="empty-state">No signed application events in this domain.</p>{% endif %}
       </div>
@@ -81,8 +81,8 @@
       <p class="context-note">Flagged username means attempted or authenticated account context. It does not establish attacker identity.</p>
       <div id="alerts-list" class="table-wrap">
         {% if snapshot.alerts %}
-          <table><thead><tr><th>Time (UTC)</th><th>Rule and reason</th><th>Flagged source</th><th>Flagged username</th><th>Evidence</th></tr></thead><tbody>
-          {% for alert in snapshot.alerts %}<tr><td>{{ alert.time_utc }}</td><td><strong>{{ alert.rule }}</strong><br>{{ alert.summary }}</td><td>{{ alert.src_ip or 'Unknown' }}</td><td>{{ alert.username or 'Not provided' }}<small>Attempted/authenticated context, not proof of attacker identity</small></td><td><code>{{ alert.evidence|tojson if alert.evidence is not none else 'No evidence supplied' }}</code></td></tr>{% endfor %}
+          <table><thead><tr><th>Time (IST)</th><th>Rule and reason</th><th>Flagged source</th><th>Flagged username</th><th>Evidence</th></tr></thead><tbody>
+          {% for alert in snapshot.alerts %}<tr><td>{{ alert.time_ist }}</td><td><strong>{{ alert.rule }}</strong><br>{{ alert.summary }}</td><td>{{ alert.src_ip or 'Unknown' }}</td><td>{{ alert.username or 'Not provided' }}<small>Attempted/authenticated context, not proof of attacker identity</small></td><td><code>{{ alert.evidence|tojson if alert.evidence is not none else 'No evidence supplied' }}</code></td></tr>{% endfor %}
           </tbody></table>
         {% else %}<p class="empty-state">No alerts in this domain.</p>{% endif %}
       </div>
@@ -98,7 +98,7 @@
       </form>
       <div id="blocks-list" class="block-list">
         {% if snapshot.blocks %}
-          {% for block in snapshot.blocks %}<article class="block-row"><div><strong>{{ block.ip }}</strong><p>{{ block.reason or 'No reason recorded' }} · Added by {{ block.created_by }} · {{ block.created_at_us|utc }}</p></div><form method="post" action="{{ url_for('remove_block', ip=block.ip) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button-secondary" type="submit">Unblock</button></form></article>{% endfor %}
+          {% for block in snapshot.blocks %}<article class="block-row"><div><strong>{{ block.ip }}</strong><p>{{ block.reason or 'No reason recorded' }} · Added by {{ block.created_by }} · Added (IST) {{ block.created_at_ist }}</p></div><form method="post" action="{{ url_for('remove_block', ip=block.ip) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button-secondary" type="submit">Unblock</button></form></article>{% endfor %}
         {% else %}<p class="empty-state">No blocked addresses.</p>{% endif %}
       </div>
     </section>

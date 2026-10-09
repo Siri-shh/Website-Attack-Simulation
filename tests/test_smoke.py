@@ -10,7 +10,7 @@ import pytest
 
 from docker_smoke import ALICE_ID, assert_cascade, csrf, detail_evidence
 from security_lab import cli
-from security_lab.config import format_utc
+from security_lab.config import format_ist
 from security_lab.console import create_console_app
 from security_lab.crypto import open_record
 from security_lab.db import connect
@@ -69,7 +69,7 @@ def assert_saved_display(html, saved):
     assert evidence["version"] == saved["version"]
     for key in ("ciphertext_b64", "nonce_b64", "sha256_hex", "signature_b64"):
         assert evidence[key] == saved[key]
-    assert evidence["times"] == [format_utc(saved[key]) for key in
+    assert evidence["times"] == [format_ist(saved[key]) for key in
                                  ("created_at_us", "updated_at_us", "generated_at_us")]
     assert evidence["sizes"] == [saved[key] for key in
                                  ("plaintext_bytes", "ciphertext_bytes", "envelope_bytes")]

@@ -96,11 +96,12 @@ function browser() {
 
 function snapshot(domain, marker) {
   return {
-    capture: { state: marker }, domains: ['live', 'offline:regression'], blocks: [],
+    capture: { state: marker }, domains: ['live', 'offline:regression'],
+    blocks: [{ ip: '192.0.2.9', reason: 'reviewed', created_by: 'admin', created_at_ist: '2026-10-09T05:30:00.000000+05:30' }],
     events: [{ kind: 'connection_attempt', domain, src_ip: '192.0.2.1',
-      dst_ip: '192.0.2.2', dst_port: 443, time_utc: '2026-10-09T00:00:00Z' }],
+      dst_ip: '192.0.2.2', dst_port: 443, time_utc: '2026-10-09T00:00:00Z', time_ist: '2026-10-09T05:30:00.000000+05:30' }],
     alerts: [{ rule: 'R1', summary: marker, src_ip: '192.0.2.1',
-      evidence: { domain, marker }, time_utc: '2026-10-09T00:00:00Z' }],
+      evidence: { domain, marker }, time_utc: '2026-10-09T00:00:00Z', time_ist: '2026-10-09T05:30:00.000000+05:30' }],
   };
 }
 
@@ -134,6 +135,9 @@ test('superseded live polling cannot render under offline selection and immediat
   assert.match(ui.ids.get('attempts-list').textContent, /offline:regression/);
   assert.match(ui.ids.get('alerts-list').textContent, /OFFLINE_ONLY/);
   assert.match(ui.ids.get('alerts-list').textContent, /"domain":"offline:regression"/);
+  assert.match(ui.ids.get('attempts-list').textContent, /2026-10-09T05:30:00\.000000\+05:30/);
+  assert.match(ui.ids.get('alerts-list').textContent, /2026-10-09T05:30:00\.000000\+05:30/);
+  assert.match(ui.ids.get('blocks-list').textContent, /Added \(IST\) 2026-10-09T05:30:00\.000000\+05:30/);
   assert.doesNotMatch(ui.ids.get('alerts-list').textContent, /LIVE_ONLY/);
   assert.deepEqual(ui.staleRenders, []);
   assert.equal(ui.requests.length, 2);

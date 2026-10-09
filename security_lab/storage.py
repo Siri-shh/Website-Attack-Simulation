@@ -3,7 +3,7 @@
 from flask import Flask, redirect, render_template, request, session, url_for
 
 from .auth import check_csrf, configure_auth, csrf_token, require_login
-from .config import Config, format_utc, normalize_ip
+from .config import Config, format_ist, format_utc, normalize_ip
 from .crypto import IntegrityError
 from .identity import KeyRing
 from .records import RecordDenied, RecordMissing, list_records, read_record, read_record_history, save_record
@@ -79,6 +79,7 @@ def create_storage_app(config: Config, keys: KeyRing) -> Flask:
     app = Flask(__name__, template_folder="templates")
     configure_auth(app, config, keys, required_role="user")
     app.jinja_env.filters["utc"] = format_utc
+    app.jinja_env.filters["ist"] = format_ist
 
     @app.get("/")
     @require_login("user")

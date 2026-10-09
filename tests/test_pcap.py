@@ -9,6 +9,7 @@ import subprocess
 import pytest
 
 from security_lab.capture import TSHARK_FIELDS
+from security_lab.config import format_ist
 from security_lab.console import snapshot
 from security_lab.db import connect, transaction
 from security_lab.packets import insert_packet, parse_packet_fields
@@ -69,7 +70,8 @@ def test_import_hash_domain_r1_and_duplicate_replay_leave_live_unchanged(config,
     assert [item["rule"] for item in offline["alerts"]] == ["R1"]
     assert all(item["kind"] == "connection_attempt" and item["signature_valid"] is None
                and item["capture_id"] == digest for item in offline["events"])
-    assert offline["capture"] == health and offline["blocks"] == before["blocks"]
+    assert offline["capture"] == {**health, "last_packet_at_ist": format_ist(20)}
+    assert offline["blocks"] == before["blocks"]
 
 
 def test_offline_rows_sort_by_original_time_then_frame(config, keys, capture_file):

@@ -12,7 +12,7 @@ docker compose up -d
 
 Wait for the server health check. Open https://localhost:8443 and https://localhost:8444, trusting the lab certificate `data/keys/server.crt` if prompted. Make a harmless request to the storage site and confirm the admin console reports capture running and shows the connection.
 
-At the storage site, sign in as `bob / BobDemo!2026`, create a record, reopen it, then edit it. Inspect the owner's detail page: full ciphertext and nonce, SHA-256 hash, Ed25519 signature, verification results, version, UTC creation/update times, input bytes, and saved encryption/hash/signing durations. Refresh and confirm the saved evidence and timings persist. A hash detects changes; the Ed25519 signature verifies signed evidence. Each save appears in version history; expand earlier versions to compare their ciphertext, hash, signature, and timings. Older texts remain encrypted and visible only to the owner.
+At the storage site, sign in as `bob / BobDemo!2026`, create a record, reopen it, then edit it. Inspect the owner's detail page: full ciphertext and nonce, SHA-256 hash, Ed25519 signature, verification results, version, IST creation/update times, input bytes, and saved encryption/hash/signing durations. Refresh and confirm the saved evidence and timings persist. A hash detects changes; the Ed25519 signature verifies signed evidence. Each save appears in version history; expand earlier versions to compare their ciphertext, hash, signature, and timings. Older texts remain encrypted and visible only to the owner.
 
 ## 2. Use independent client requests if desired
 
@@ -58,3 +58,6 @@ docker compose up -d
 ```
 
 Offline findings are labelled separately. A repeated import adds zero duplicate observations/alerts and does not change live capture status. Ordinary stop/start preserves records, keys, captures, alerts, and blocks. Keep the entire project checkout including .git for recovery; preserve ignored runtime keys and data separately if they must survive moving or replacing the checkout. Reset is an explicit action: stop the server, run `docker compose run --rm --no-deps server python -m security_lab reset --confirm RESET`, then start it again. Reset clears database and captures but preserves keys.
+# Displayed times
+
+Website timestamps are shown in IST (UTC+05:30). Stored timestamps and signed UTC values remain unchanged.

@@ -77,8 +77,8 @@ def detail_evidence(html):
     check(len(nonce_bytes) == 12 and len(signature_bytes) == 64
           and re.fullmatch(r"[0-9a-f]{64}", digest) is not None,
           "Invalid nonce/signature/hash sizes")
-    check(all(re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z", value)
-              for value in times), "Timestamps must include microseconds and UTC")
+    check(all(re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}\+05:30", value)
+              for value in times), "Displayed timestamps must include microseconds and IST")
     check(instants[0] <= instants[1] == instants[2], "Record timestamp ordering changed")
     check(len(cipher_bytes) == int(sizes[1]) == int(sizes[0]) + 16
           and int(sizes[2]) > len(cipher_bytes), "Displayed input/envelope sizes disagree")

@@ -1,6 +1,6 @@
 import pytest
 
-from security_lab.config import Config, format_utc, load_config, normalize_ip, utc_us
+from security_lab.config import Config, format_ist, format_utc, load_config, normalize_ip, utc_us
 
 
 def test_defaults():
@@ -22,6 +22,8 @@ def test_distinct_ports():
 
 def test_utc_and_mapped_ip():
     assert format_utc(0) == "1970-01-01T00:00:00.000000Z"
+    assert format_ist(0) == "1970-01-01T05:30:00.000000+05:30"
+    assert format_ist(1_000_001) == "1970-01-01T05:30:01.000001+05:30"
     assert normalize_ip("::ffff:192.168.1.2") == "192.168.1.2"
 
 

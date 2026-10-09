@@ -9,6 +9,7 @@ from werkzeug.security import generate_password_hash
 
 from security_lab.audit import append_app_event, verify_app_event
 from security_lab.console import create_console_app, snapshot
+from security_lab.config import format_ist, format_utc
 from security_lab.db import connect, transaction
 from security_lab.storage import create_storage_app
 
@@ -104,6 +105,7 @@ def test_manual_block_normalizes_persists_and_audits_admin_peer_and_target(
     assert snap["blocks"] == [{
         "ip": "192.0.2.77", "created_by": "admin", "reason": "reviewed evidence",
         "created_at_us": snap["blocks"][0]["created_at_us"],
+        "created_at_ist": format_ist(snap["blocks"][0]["created_at_us"]),
     }]
     row = next(event for event in reversed(_events(config)) if event["kind"] == "admin_block")
     assert row["src_ip"] == "192.0.2.10"
@@ -225,6 +227,19 @@ def test_snapshot_is_allowlisted_bounded_and_live_is_default(config, keys):
     assert packet[0]["domain"] == "offline:deadbeef"
 
 
+def test_snapshot_exposes_ist_capture_time_and_preserves_raw_utc(config, keys):
+    _seed(config)
+    captured = 1_000_001
+    with transaction(config) as conn:
+        conn.execute(
+            "INSERT INTO status(key,value_json) VALUES('capture',?)",
+            ('{"state":"running","last_packet_at_us":1000001}',),
+        )
+    result = snapshot(config, keys)
+    assert result["capture"]["last_packet_at_us"] == captured
+    assert result["capture"]["last_packet_at_ist"] == format_ist(captured)
+
+
 def test_snapshot_keeps_signed_logs_when_newer_packet_rows_exceed_shared_limit(config, keys):
     _seed(config)
     with transaction(config) as conn:
@@ -268,10 +283,12 @@ def test_snapshot_keeps_signed_logs_when_newer_packet_rows_exceed_shared_limit(c
     assert all(event["signature_valid"] is None for event in packets)
     assert all(event["signature_valid"] is True for event in audit)
     assert all(event["domain"] == "live" for event in events)
+    assert all(event["time_utc"] == format_utc(event["time_us"]) for event in events)
+    assert all(event["time_ist"] == format_ist(event["time_us"]) for event in events)
     assert set(events[0]) == {
         "seq", "domain", "event_id", "time_us", "kind", "src_ip", "dst_ip", "dst_port",
         "username", "session_ref", "record_id", "outcome", "capture_id", "frame_number",
-        "signature_valid", "time_utc",
+        "signature_valid", "time_utc", "time_ist",
     }
 
     offline = snapshot(config, keys, "offline:old")["events"]

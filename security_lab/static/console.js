@@ -43,7 +43,7 @@
     const capture = data.capture || {};
     document.getElementById("capture-title").textContent = capture.state || "Unknown";
     document.getElementById("capture-error").textContent = capture.error || "No capture error reported.";
-    document.getElementById("last-packet").textContent = capture.last_packet_at_us == null ? "No packets observed" : new Date(Number(capture.last_packet_at_us) / 1000).toISOString();
+    document.getElementById("last-packet").textContent = capture.last_packet_at_ist || "No packets observed";
 
     const attempts = (data.events || []).filter(item => item.kind === "connection_attempt");
     const appEvents = (data.events || []).filter(item => item.kind !== "connection_attempt");
@@ -55,21 +55,21 @@
     document.getElementById("block-count").textContent = String(blocks.length);
 
     replace("attempts-list", table(
-      ["Time (UTC)", "Source address", "Destination", "Port", "Observed domain"],
-      attempts.map(item => [time(item.time_utc), item.src_ip, item.dst_ip, item.dst_port, item.domain])
+      ["Time (IST)", "Source address", "Destination", "Port", "Observed domain"],
+      attempts.map(item => [time(item.time_ist), item.src_ip, item.dst_ip, item.dst_port, item.domain])
     ));
     replace("events-list", table(
-      ["Time (UTC)", "Event", "Source", "Account context", "Signature"],
+      ["Time (IST)", "Event", "Source", "Account context", "Signature"],
       appEvents.map(item => [
-        time(item.time_utc), item.kind, item.src_ip,
+        time(item.time_ist), item.kind, item.src_ip,
         item.username || "Not provided",
         item.signature_valid === true ? "Valid" : item.signature_valid === false ? "Invalid" : "Not signed"
       ])
     ));
     replace("alerts-list", table(
-      ["Time (UTC)", "Rule and reason", "Flagged source", "Flagged username (attempted/authenticated context)", "Evidence"],
+      ["Time (IST)", "Rule and reason", "Flagged source", "Flagged username (attempted/authenticated context)", "Evidence"],
       alerts.map(item => [
-        time(item.time_utc), [item.rule, item.summary].filter(Boolean).join(": "),
+        time(item.time_ist), [item.rule, item.summary].filter(Boolean).join(": "),
         item.src_ip, item.username || "Not provided", evidenceText(item.evidence)
       ])
     ));
@@ -83,7 +83,7 @@
         row.className = "block-row";
         const description = document.createElement("div");
         description.append(text("strong", block.ip));
-        description.append(text("p", (block.reason || "No reason recorded") + " · Added by " + (block.created_by || "Unknown") + " · " + (block.created_at_us || "")));
+        description.append(text("p", (block.reason || "No reason recorded") + " · Added by " + (block.created_by || "Unknown") + " · Added (IST) " + (block.created_at_ist || "")));
         const form = document.createElement("form");
         form.method = "post";
         form.action = "/blocks/" + encodeURIComponent(String(block.ip)) + "/remove";

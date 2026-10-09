@@ -7,7 +7,7 @@ import pytest
 from jinja2 import FileSystemLoader
 
 from security_lab import records
-from security_lab.config import format_utc
+from security_lab.config import format_ist
 
 
 _TEMPLATE_ROOT = Path(__file__).parents[1] / "security_lab" / "templates"
@@ -55,7 +55,7 @@ def _saved(config, keys, *, owner="alice", title="Evidence title", body="Evidenc
     )
 
 
-def test_detail_renders_exact_saved_crypto_evidence_and_utc_times(real_storage_client, config, keys):
+def test_detail_renders_exact_saved_crypto_evidence_and_ist_times(real_storage_client, config, keys):
     _login(real_storage_client)
     row = _saved(config, keys)
 
@@ -69,9 +69,9 @@ def test_detail_renders_exact_saved_crypto_evidence_and_utc_times(real_storage_c
         row["sha256_hex"],
         row["signature_b64"],
         str(row["version"]),
-        format_utc(row["created_at_us"]),
-        format_utc(row["updated_at_us"]),
-        format_utc(row["generated_at_us"]),
+        format_ist(row["created_at_us"]),
+        format_ist(row["updated_at_us"]),
+        format_ist(row["generated_at_us"]),
         str(row["plaintext_bytes"]),
         str(row["ciphertext_bytes"]),
         str(row["envelope_bytes"]),
@@ -81,6 +81,8 @@ def test_detail_renders_exact_saved_crypto_evidence_and_utc_times(real_storage_c
     assert "Ed25519 digital signature" in html
     assert "Digital signature verification passed" in html
     assert "Envelope hash verification passed" in html
+    assert "(IST)" in html
+    assert "Updated (IST)" in html
 
 
 def test_detail_escapes_script_title_and_uses_saved_timings_without_regeneration(

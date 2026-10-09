@@ -8,7 +8,7 @@ from flask import Flask, abort, jsonify, redirect, render_template, request, ses
 
 from .audit import append_app_event, verify_app_event
 from .auth import check_csrf, configure_auth, csrf_token, require_login
-from .config import Config, format_utc, normalize_ip, utc_us
+from .config import Config, format_ist, format_utc, normalize_ip, utc_us
 from .db import connect, transaction
 from .identity import KeyRing
 from .analysis import aes_gcm_analysis, aes_primitive_analysis, sha256_analysis
@@ -55,6 +55,10 @@ def snapshot(config: Config, keys: KeyRing, domain: str = "live") -> dict:
             "SELECT DISTINCT domain FROM events UNION SELECT DISTINCT domain FROM alerts"
         ))
         capture = _capture_status(conn)
+        capture["last_packet_at_ist"] = (
+            format_ist(capture["last_packet_at_us"])
+            if type(capture["last_packet_at_us"]) is int else None
+        )
         packet_rows = conn.execute(
             "SELECT * FROM events WHERE domain=? AND kind=? "
             "ORDER BY time_us DESC,seq DESC LIMIT ?",
@@ -78,6 +82,7 @@ def snapshot(config: Config, keys: KeyRing, domain: str = "live") -> dict:
             else:
                 item["signature_valid"] = bool(verify_app_event(keys, row))
             item["time_utc"] = format_utc(row["time_us"])
+            item["time_ist"] = format_ist(row["time_us"])
             events.append(item)
 
         alert_rows = conn.execute(
@@ -93,11 +98,14 @@ def snapshot(config: Config, keys: KeyRing, domain: str = "live") -> dict:
                 evidence = None
             item["evidence"] = evidence if isinstance(evidence, dict) else None
             item["time_utc"] = format_utc(row["time_us"])
+            item["time_ist"] = format_ist(row["time_us"])
             alerts.append(item)
 
         blocks = [dict(row) for row in conn.execute(
             "SELECT ip,created_by,reason,created_at_us FROM blocks ORDER BY ip"
         )]
+        for block in blocks:
+            block["created_at_ist"] = format_ist(block["created_at_us"])
     return {"domain": domain, "domains": domains, "capture": capture,
             "events": events, "alerts": alerts, "blocks": blocks}
 
@@ -126,6 +134,7 @@ def create_console_app(config: Config, keys: KeyRing) -> Flask:
     app = Flask(__name__, template_folder="templates")
     configure_auth(app, config, keys, required_role="admin")
     app.jinja_env.filters["utc"] = format_utc
+    app.jinja_env.filters["ist"] = format_ist
     analysis_sample = "Cryptography analysis sample"
 
     @app.after_request

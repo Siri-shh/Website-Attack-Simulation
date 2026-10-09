@@ -10,9 +10,9 @@
     <h1>{{ plaintext.title }}</h1>
     <div class="record-body">{{ plaintext.body }}</div>
     <dl class="record-dates">
-      <div><dt>Created</dt><dd><time datetime="{{ record.created_at_us | utc }}">{{ record.created_at_us | utc }}</time></dd></div>
-      <div><dt>Updated</dt><dd><time datetime="{{ record.updated_at_us | utc }}">{{ record.updated_at_us | utc }}</time></dd></div>
-      <div><dt>Evidence generated</dt><dd><time datetime="{{ record.generated_at_us | utc }}">{{ record.generated_at_us | utc }}</time></dd></div>
+      <div><dt>Created (IST)</dt><dd><time datetime="{{ record.created_at_us | ist }}">{{ record.created_at_us | ist }}</time></dd></div>
+      <div><dt>Updated (IST)</dt><dd><time datetime="{{ record.updated_at_us | ist }}">{{ record.updated_at_us | ist }}</time></dd></div>
+      <div><dt>Evidence generated (IST)</dt><dd><time datetime="{{ record.generated_at_us | ist }}">{{ record.generated_at_us | ist }}</time></dd></div>
     </dl>
   </article>
 
@@ -60,9 +60,9 @@
           <pre>{{ version_plaintext.body }}</pre>
           <p><strong>Ed25519 verification:</strong> Verified</p>
           <dl>
-            <dt>Updated (UTC)</dt><dd>{{ version.updated_at_us|utc }}</dd>
-            <dt>Created (UTC)</dt><dd>{{ version.created_at_us|utc }}</dd>
-            <dt>Generated (UTC)</dt><dd>{{ version.generated_at_us|utc }}</dd>
+            <dt>Updated (IST)</dt><dd>{{ version.updated_at_us|ist }}</dd>
+            <dt>Created (IST)</dt><dd>{{ version.created_at_us|ist }}</dd>
+            <dt>Generated (IST)</dt><dd>{{ version.generated_at_us|ist }}</dd>
             <dt>Nonce</dt><dd><code>{{ version.nonce_b64 }}</code></dd>
             <dt>Ciphertext</dt><dd><pre><code>{{ version.ciphertext_b64 }}</code></pre></dd>
             <dt>SHA-256</dt><dd><code>{{ version.sha256_hex }}</code> · hash verified</dd>
