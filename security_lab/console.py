@@ -109,14 +109,6 @@ def _target_ip(value: str) -> str:
         abort(400)
 
 
-def _record_block_event(config: Config, keys: KeyRing, *, kind: str, target: str) -> None:
-    append_app_event(
-        request._get_current_object().app.extensions["console_config_conn"],
-        keys,
-        {},
-    )
-
-
 def create_console_app(config: Config, keys: KeyRing) -> Flask:
     """Create the independent administrator application."""
     app = Flask(__name__, template_folder="templates")

@@ -2,12 +2,12 @@
 
 Plan: `docs/superpowers/plans/2026-10-09-storage-security-plan.md`
 Spec: `docs/superpowers/specs/2026-10-09-storage-security-design.md`
-Status: **WAITING_FOR_WORKSPACE_SPEND_CAP**
+Status: **IMPLEMENTING**
 Execution approval: user's “continue” on 9 October 2026 authorizes the written plan and selected Luna/Sol delegation.
-Current milestone: M4 detection and separate admin console.
-Next action: Restore requested agent spending capacity, then T12 console UI tests/implementation; bundle T11/T12 review at M4. Preserve current code; do not restart T11.
-Current task base commit: `54ecffebff6b4cc313e9f9c71f31fd10c7948e86`.
-Current task phase: T11 verified; worker interrupted by workspace spend cap; console7 passed5.98s; M4 review pending; Luna workspace spend cap reached.
+Current milestone: M5 live capture and PCAP analysis.
+Next action: Commit/tag M4 then T13 Luna packet tests.
+Current task base commit: `dcff01c600e37e124bf5b24222a2b462eaf0e611`.
+Current task phase: T12 complete; M4 final Sol PASS; requiredsuite33 pass; D27 Node1/UI5 pass.
 Current branch: `feature/storage-security`.
 Initial design commit: `7b1e53c`.
 Planning checkpoint: Git tag `checkpoint/m0-plan` once this documentation is committed.
@@ -28,8 +28,8 @@ Planning checkpoint is committed and tagged. The virtual environment and locked 
 | T08 | M3 | gpt-6-luna | COMPLETE | M3 Sol PASS; full suite209 passed42.17s |
 | T09 | M3 | gpt-6-luna | COMPLETE | M3 Sol PASS; full suite209 passed42.17s |
 | T10 | M4 | gpt-6.1-sol | COMPLETE | rules21 passed3.02s; independent Sol PASS; audit/storage113 passed207.90s |
-| T11 | M4 | gpt-6-luna | VERIFIED_PENDING_REVIEW | console7 passed5.98s; M4 review pending; Luna workspace spend cap reached |
-| T12 | M4 | gpt-6-luna | TODO | none |
+| T11 | M4 | gpt-6-luna | COMPLETE | M4 final Sol PASS; requiredsuite33 pass; D27 Node1/UI5 pass |
+| T12 | M4 | gpt-6-luna | COMPLETE | M4 final Sol PASS; requiredsuite33 pass; D27 Node1/UI5 pass |
 | T13 | M5 | gpt-6-luna | TODO | none |
 | T14 | M5 | gpt-6.1-sol | TODO | none |
 | T15 | M5 | gpt-6.1-sol | TODO | none |
@@ -57,7 +57,7 @@ At each milestone, stage the changed code/tests and all updated durable document
 | M1 | checkpoint/m1-foundation | verified; checkpoint tag identifies the completion commit |
 | M2 | checkpoint/m2-crypto | verified; full suite168 passed21.61s; Sol PASS; checkpoint tag identifies commit |
 | M3 | checkpoint/m3-storage | verified209 passed42.17s; independent Sol PASS; checkpoint tag identifies commit |
-| M4 | checkpoint/m4-console | not started |
+| M4 | checkpoint/m4-console | verified33 tests plusD27 Node1/UI5; finalSolPASS; tag identifies completion commit |
 | M5 | checkpoint/m5-capture | not started |
 | M6 | checkpoint/m6-deployment | not started |
 | M7 | checkpoint/m7-ready | not started |
@@ -66,4 +66,4 @@ At each milestone, stage the changed code/tests and all updated durable document
 
 The actual two-physical-computer LAN test requires a second computer. Local configuration tests cannot replace that test; report the distinction when delivering the project.
 
-External execution limitation: the designated gpt-6-luna worker returned "You hit your spend cap set by the owner of your workspace." The user-mandated model routing remains in force; no model substitution was made. All writers stopped. T11 code passed controller tests but M4 is incomplete. Next task is T12 after agent capacity is restored.
+Historical interruption: the T11 worker hit the workspace spend cap; work was saved at dcff01c. The user resumed and T12 Luna/Sol workers now run successfully. No model substitution was made.

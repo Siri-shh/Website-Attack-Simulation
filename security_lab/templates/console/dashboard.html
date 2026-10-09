@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Security console</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='console.css') }}">
+  <script src="{{ url_for('static', filename='console.js') }}" defer></script>
+</head>
+<body>
+  <header class="console-header">
+    <a class="brand" href="{{ url_for('dashboard') }}">Security console</a>
+    <span class="role-badge">Administrator</span>
+  </header>
+  <main class="console-shell" id="console" data-csrf-token="{{ csrf_token }}">
+    <section class="page-heading">
+      <div>
+        <p class="eyebrow">Live monitoring</p>
+        <h1>Security activity</h1>
+        <p class="lede">Review observed network metadata, signed application events, detections, and manual blocks.</p>
+      </div>
+      <label class="domain-control" for="domain-select">Evidence domain
+        <select id="domain-select" name="domain">
+          {% set domains = snapshot.domains + (['live'] if 'live' not in snapshot.domains else []) %}
+          {% for domain in domains|sort %}
+            <option value="{{ domain }}" {% if domain == snapshot.domain %}selected{% endif %}>
+              {{ 'Live' if domain == 'live' else domain }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+    </section>
+
+    <div id="connection-warning" class="connection-warning" role="status" hidden>
+      Snapshot refresh failed. Showing the most recent available data.
+    </div>
+
+    <section class="capture-card" aria-labelledby="capture-title">
+      <div>
+        <p class="eyebrow">Capture health</p>
+        <h2 id="capture-title">{{ snapshot.capture.state|capitalize }}</h2>
+        <p id="capture-error" class="capture-error">{% if snapshot.capture.error %}{{ snapshot.capture.error }}{% else %}No capture error reported.{% endif %}</p>
+      </div>
+      <div class="capture-meta">
+        <span>Last packet</span>
+        <time id="last-packet">{% if snapshot.capture.last_packet_at_us %}{{ snapshot.capture.last_packet_at_us|utc }}{% else %}No packets observed{% endif %}</time>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="attempts-title">
+      <div class="panel-heading"><div><p class="eyebrow">Network observations</p><h2 id="attempts-title">Incoming connection attempts</h2></div><span id="attempt-count" class="count">{{ snapshot.events|selectattr('kind', 'equalto', 'connection_attempt')|list|length }}</span></div>
+      <p class="metadata-note">Encrypted-network metadata only; packet payloads are not displayed.</p>
+      <div id="attempts-list" class="table-wrap">
+        {% set attempts = snapshot.events|selectattr('kind', 'equalto', 'connection_attempt')|list %}
+        {% if attempts %}
+          <table><thead><tr><th>Time (UTC)</th><th>Source address</th><th>Destination</th><th>Port</th><th>Observed domain</th></tr></thead><tbody>
+          {% for event in attempts %}<tr><td>{{ event.time_utc }}</td><td>{{ event.src_ip or 'Unknown' }}</td><td>{{ event.dst_ip or 'Unknown' }}</td><td>{{ event.dst_port or '—' }}</td><td>{{ event.domain }}</td></tr>{% endfor %}
+          </tbody></table>
+        {% else %}<p class="empty-state">No connection attempts in this domain.</p>{% endif %}
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="events-title">
+      <div class="panel-heading"><div><p class="eyebrow">Application audit</p><h2 id="events-title">Signed application events</h2></div><span id="event-count" class="count">{{ snapshot.events|rejectattr('kind', 'equalto', 'connection_attempt')|list|length }}</span></div>
+      <div id="events-list" class="table-wrap">
+        {% set app_events = snapshot.events|rejectattr('kind', 'equalto', 'connection_attempt')|list %}
+        {% if app_events %}
+          <table><thead><tr><th>Time (UTC)</th><th>Event</th><th>Source</th><th>Account context</th><th>Signature</th></tr></thead><tbody>
+          {% for event in app_events %}<tr><td>{{ event.time_utc }}</td><td>{{ event.kind }}</td><td>{{ event.src_ip or 'Unknown' }}</td><td>{{ event.username or 'Not provided' }}</td><td>{% if event.signature_valid %}<span class="status-good">Valid</span>{% else %}<span class="status-bad">Invalid</span>{% endif %}</td></tr>{% endfor %}
+          </tbody></table>
+        {% else %}<p class="empty-state">No signed application events in this domain.</p>{% endif %}
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="alerts-title">
+      <div class="panel-heading"><div><p class="eyebrow">Detection rules</p><h2 id="alerts-title">R1–R5 alerts</h2></div><span id="alert-count" class="count">{{ snapshot.alerts|length }}</span></div>
+      <p class="context-note">Flagged username means attempted or authenticated account context. It does not establish attacker identity.</p>
+      <div id="alerts-list" class="table-wrap">
+        {% if snapshot.alerts %}
+          <table><thead><tr><th>Time (UTC)</th><th>Rule and reason</th><th>Flagged source</th><th>Flagged username</th><th>Evidence</th></tr></thead><tbody>
+          {% for alert in snapshot.alerts %}<tr><td>{{ alert.time_utc }}</td><td><strong>{{ alert.rule }}</strong><br>{{ alert.summary }}</td><td>{{ alert.src_ip or 'Unknown' }}</td><td>{{ alert.username or 'Not provided' }}<small>Attempted/authenticated context, not proof of attacker identity</small></td><td><code>{{ alert.evidence|tojson if alert.evidence is not none else 'No evidence supplied' }}</code></td></tr>{% endfor %}
+          </tbody></table>
+        {% else %}<p class="empty-state">No alerts in this domain.</p>{% endif %}
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="blocks-title">
+      <div class="panel-heading"><div><p class="eyebrow">Manual controls</p><h2 id="blocks-title">Blocked source addresses</h2></div><span id="block-count" class="count">{{ snapshot.blocks|length }}</span></div>
+      <form class="block-form" action="{{ url_for('add_block') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label>IP address<input name="ip" inputmode="url" required></label>
+        <label>Reason <span class="optional">(up to 200 characters)</span><input name="reason" maxlength="200"></label>
+        <button type="submit">Block address</button>
+      </form>
+      <div id="blocks-list" class="block-list">
+        {% if snapshot.blocks %}
+          {% for block in snapshot.blocks %}<article class="block-row"><div><strong>{{ block.ip }}</strong><p>{{ block.reason or 'No reason recorded' }} · Added by {{ block.created_by }} · {{ block.created_at_us|utc }}</p></div><form method="post" action="{{ url_for('remove_block', ip=block.ip) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button-secondary" type="submit">Unblock</button></form></article>{% endfor %}
+        {% else %}<p class="empty-state">No blocked addresses.</p>{% endif %}
+      </div>
+    </section>
+    <p class="refresh-note">Dashboard refreshes every 2 seconds while connected.</p>
+  </main>
+</body>
+</html>

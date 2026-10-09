@@ -328,10 +328,10 @@ git status --short
 **Owned:** `security_lab/console.py`, `tests/test_console.py`.
 **Interfaces:** `create_console_app(config: Config, keys: KeyRing) -> Flask`, `snapshot(config: Config, keys: KeyRing, domain: str='live') -> dict`. Routes `/` GET, `/api/snapshot?domain=live` GET, `/blocks` POST(ip/reason/csrf_token), `/blocks/<ip>/remove` POST(csrf_token); admin auth+CSRF. Snapshot keys `domain, domains, capture, events, alerts, blocks`; domains is sorted list of available domain strings. Events expose normalized public event columns plus `time_utc` and `signature_valid` (bool for audit, None for packet); alerts expose public alert columns plus parsed `evidence` and time_utc; omit payload_json/signature raw/private fields. Newest100 events/alerts by time_us/seq or id; blocks expose ip/created_by/reason/created_at_us. Invalid signatures remain visibly marked, never labelled verified. Dashboard receives initial `snapshot` and `csrf_token`. No record plaintext/private key/password hashes in snapshot.
 
-- [ ] Write tests: ordinary user cannot authenticate/view snapshot; user session cookie cannot authorize console; admin succeeds; POST block with valid CSRF normalizes actual IP, persists and audits; absent CSRF gives400; unblock removes and audits. For block/unblock events, src_ip is the admin peer and dst_ip is the target IP, preserving which address was acted upon. Existing Bob client becomes403 on storage after admin block; XFF cannot bypass; unblocking restores normal access. Default snapshot excludes offline data.
-- [ ] Controller runs `& $labPy -m pytest tests/test_console.py -q` for red.
-- [ ] Implement queries and actions using existing contracts; validate IP and reason length<=200, reject empty/invalid addresses with400, redirect303 to dashboard after successful action. Block/unblock audit payload uses dst_ip for the target and src_ip for the actual admin peer. Add no firewall or automatic ban logic.
-- [ ] Controller reruns; expected PASS.
+- [x] Write tests: ordinary user cannot authenticate/view snapshot; user session cookie cannot authorize console; admin succeeds; POST block with valid CSRF normalizes actual IP, persists and audits; absent CSRF gives400; unblock removes and audits. For block/unblock events, src_ip is the admin peer and dst_ip is the target IP, preserving which address was acted upon. Existing Bob client becomes403 on storage after admin block; XFF cannot bypass; unblocking restores normal access. Default snapshot excludes offline data.
+- [x] Controller runs `& $labPy -m pytest tests/test_console.py -q` for red.
+- [x] Implement queries and actions using existing contracts; validate IP and reason length<=200, reject empty/invalid addresses with400, redirect303 to dashboard after successful action. Block/unblock audit payload uses dst_ip for the target and src_ip for the actual admin peer. Add no firewall or automatic ban logic.
+- [x] Controller reruns; expected PASS.
 
 ### Task T12: Live console page
 
@@ -339,15 +339,17 @@ git status --short
 **Owned:** `security_lab/templates/console/dashboard.html`, `security_lab/static/console.js`, `security_lab/static/console.css`, `tests/test_console_ui.py`.
 **Interfaces:** Snapshot shape and routes T11. Page shows capture status/error, incoming connection attempts, signed application events, R1-R5 alert reasons/evidence, flagged sources and associated usernames, blocks with actions, and live/offline domain selector. Ã¢â‚¬Å“Flagged usernameÃ¢â‚¬Â is labelled attempted/authenticated context, not proven attacker identity.
 
-- [ ] Write HTML tests proving admin-only dashboard and visible forms/CSRF, source/account distinction, encrypted-network metadata label, empty state and capture-degraded message. Test snapshot escaping contract using a malicious-looking username; dynamic text must use textContent, not innerHTML interpolation.
-- [ ] Controller runs `& $labPy -m pytest tests/test_console_ui.py -q` for red.
-- [ ] Implement fetch polling every2000ms, retain current content on failed fetch and display connection warning, prevent overlapping in-flight polls. Render with DOM textContent; keep block/unblock ordinary POST forms. No attack launch controls or full-page reload.
-- [ ] Controller reruns; expected PASS. T20 verifies actual updates in a browser.
+- [x] Write HTML tests proving admin-only dashboard and visible forms/CSRF, source/account distinction, encrypted-network metadata label, empty state and capture-degraded message. Test snapshot escaping contract using a malicious-looking username; dynamic text must use textContent, not innerHTML interpolation.
+- [x] Controller runs `& $labPy -m pytest tests/test_console_ui.py -q` for red.
+- [x] Implement fetch polling every2000ms, retain current content on failed fetch and display connection warning, prevent overlapping in-flight polls. Render with DOM textContent; keep block/unblock ordinary POST forms. No attack launch controls or full-page reload.
+- [x] Controller reruns; expected PASS. T20 verifies actual updates in a browser.
+
+Controller also runs `node --test tests/console_polling.test.cjs` for the D27 delayed-domain-response regression; this is a dependency-free development check, not an application runtime dependency.
 
 **M4 review/checkpoint Ã¢â‚¬â€ controller:** Sol reviews separate app identity, manual controls and polling; T10 review remains part of evidence. Run rules/console/console_ui and relevant auth tests, then:
 
 ```powershell
-git add -- security_lab/rules.py security_lab/audit.py security_lab/console.py security_lab/templates/console security_lab/static/console.js security_lab/static/console.css tests/test_rules.py tests/test_console.py tests/test_console_ui.py docs/implementation docs/superpowers/plans/2026-10-09-storage-security-plan.md
+git add -- security_lab/rules.py security_lab/audit.py security_lab/console.py security_lab/templates/console security_lab/static/console.js security_lab/static/console.css tests/test_rules.py tests/test_console.py tests/test_console_ui.py tests/console_polling.test.cjs docs/implementation docs/superpowers/plans/2026-10-09-storage-security-plan.md
 git diff --cached --check
 git commit -m 'feat(M4): add deterministic detection and separate admin console'
 git tag -a checkpoint/m4-console -m 'M4 verified: live alerts and manual IP blocks'
