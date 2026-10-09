@@ -23,3 +23,7 @@ These decisions travel with the repository and override conflicting worker assum
 | D17 | Keep Windows TShark fallback; simulate missing PATH and fallback in the absent-tool test; require explicit NOT NULL even on SQLite text primary keys | Sol diagnosed the environment-specific test failure and schema NULL semantics during T01 |
 
 Append later entries with task ID, decision, reason, and effect on the contracts. Resolve ambiguities using the user requirements and spec before changing the plan.
+
+D18 (T03 Sol contract): ensure_certificate(config, *, renew=False) supports explicit certificate-only renewal; never replace data/signing/session keys during renewal. Missing/corrupt required keys raise RuntimeError naming the file; SAN mismatch directs init --renew-certificate. KeyRing hides secret fields from repr. Existing records or any events prevent missing-key regeneration.
+
+D19 (T05 Sol validation): signed application payloads require the exact approved field set, live domain, lowercase UUID hex event_id, integer timestamp (excluding bool), known application kind, nullable string context and nullable valid TCP port. Normalize actual valid peer/destination IP literals; unknown/invalid source becomes unknown. Indexed values must equal the canonical signed payload; verification rejects noncanonical payloads. Duplicate (domain,event_id) insertion is a no-op preserving original evidence even if the submitted replay differs.
