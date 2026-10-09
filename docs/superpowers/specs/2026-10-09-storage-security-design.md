@@ -6,7 +6,7 @@ Build a small, understandable security project in `new_project` for a professor 
 
 Demonstrate confidentiality, integrity, authentication, and accountability. Use actual traffic capture and PCAP analysis through Wireshark's TShark. Docker is the primary two-device setup; two physical computers on the same LAN are the fallback.
 
-The storage website always enforces security. It has no attack controls, scenario selection, vulnerability switch, or demonstration panel. The project does not depend on an attacker declaring a scenario or reporting an attack. External scripts are conveniences for the presenter acting as the attacker, rather than a service or component of the security framework.
+The storage website always enforces security. It has no attack controls, scenario selection, or vulnerability switch. Its normal record detail page includes the owner's cryptographic evidence and measured generation timings. The project does not depend on an attacker declaring a scenario or reporting an attack. External scripts are conveniences for the presenter acting as the attacker, rather than a service or component of the security framework.
 
 ## Architecture
 
@@ -23,6 +23,10 @@ Proposed modules: application factories/routes, database access, record cryptogr
 Seed Bob and Alice as storage users and a separate administrator identity for the console. Document demo credentials. Public registration is outside scope.
 
 Users log in, log out, list their records, create a record with a title and text, view a record, and edit their own records. Store the latest version only. Creation and edits are audited. Authentication is required for record operations, and ownership is checked on the server for every record request.
+
+On each owner's record detail page, display the complete ciphertext as Base64, nonce, SHA-256 envelope hash as hexadecimal, Ed25519 signature as Base64, signature/hash verification results, record version, creation/update timestamps, and the time those values were generated. Clearly label the SHA-256 hash and Ed25519 digital signature separately; SHA-256 alone is not a digital signature. Do not expose password hashes, private keys, or another user's record evidence.
+
+Show measured encryption, SHA-256 hashing, and signing generation durations for the saved version, in milliseconds, plus the encrypted input size in bytes. Measure the actual operations with a monotonic high-resolution timer; exclude database, HTTP, and HTML work. Persist the observations with their record version so refreshes show that version's measurements instead of regenerating them. Display a small comparison of encryption/hash/signing durations, with numeric values and units. Mark them as individual operation measurements on the current machine, not a general benchmark or proof of security. Measure no repeated synthetic benchmark workload on page load.
 
 Password storage uses a salted password hashing function. SQL uses bound parameters; templates escape text. State-changing forms use CSRF protection. Sessions are cleared and renewed at login and cleared at logout. No passwords, session cookies, record plaintext, or private keys appear in audit logs or console views.
 
@@ -106,6 +110,7 @@ Provide a short README with Docker startup, separate website addresses, credenti
 
 - Bob can create, read, and edit his records. Alice cannot read or edit them by changing a URL or request. Unauthenticated access is denied.
 - Stored records contain encrypted title/text; passwords are hashed. Valid records verify and decrypt, while altered ciphertext or owner metadata is rejected and logged.
+- The owner's record page displays full ciphertext, SHA-256 hash, Ed25519 signature, nonce, timestamps, version, verification results, and actual saved encryption/hash/signing timings with input bytes. Evidence is ownership-protected; refreshing does not rerun generation or replace timing values. Deterministic timer tests verify instrumentation without assuming particular real-world speeds.
 - Admin login is isolated from user login; user cookies do not authorize console access. State-changing requests require CSRF tokens.
 - Real connection probes and login/access attempts trigger R1-R5 according to the exact windows, including tests below thresholds and for different sources/accounts. Findings contain reproducible evidence references.
 - Manual blocking denies subsequent storage requests and unblocking restores access. Spoofed forwarding headers cannot bypass a block or frame another IP.
@@ -118,3 +123,9 @@ Provide a short README with Docker startup, separate website addresses, credenti
 - `cryptography` documentation via Context7: AESGCM with 256-bit keys, unique nonces, associated data, and Ed25519 signing/verification.
 - Wireshark documentation via Context7 and installed TShark 4.6.9 help: live and saved capture support, field output, PCAPNG output, and output flushing.
 - Existing project README, detection configuration, rules, target authentication code, and Compose topology.
+
+## Implementation and recovery requirements
+
+The implementation plan must freeze file responsibilities, interfaces, algorithms, assertions, and acceptance commands before delegating mechanical tasks to `gpt-6-luna`. Assign architecture, unresolved decisions, complex code, debugging, and reviews to `gpt-6.1-sol`. Always specify the model and reasoning effort explicitly. The main/controller agent owns installations, command-line tests, processes, capture permissions, and every Git command; subagents edit or reason from supplied task packets and do not run shell/Git commands or spawn helpers.
+
+Define atomic tasks with dependencies, owned files, exact outputs, and completion evidence. Each milestone ends with an explicit local Git commit and named checkpoint tag after verification and review. Keep a committed progress ledger, decision log, task reports, and resume instructions in the repository. These records must survive context loss, an account change, and the disappearance of old agent identities or plugin installations. Never delete the durable recovery record at completion. Resume from verified commits and unfinished steps rather than rebuilding completed work.
