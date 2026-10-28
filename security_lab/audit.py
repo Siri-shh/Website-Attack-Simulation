@@ -21,6 +21,7 @@ _FIELDS = (
 )
 _KINDS = frozenset({
     "login_failure", "login_success", "admin_login_failure", "admin_login_success",
+    "login_restricted_attempt",
     "record_created", "record_updated", "record_read", "foreign_record_denied",
     "integrity_failure", "blocked_request", "logout", "admin_block", "admin_unblock",
 })
@@ -45,6 +46,8 @@ def _normalized_payload(payload: dict) -> dict:
             raise ValueError("Invalid application event context")
     if not isinstance(value["outcome"], str):
         raise ValueError("Invalid application event outcome")
+    if value["kind"] == "login_restricted_attempt" and value["outcome"] != "login_restricted_attempt":
+        raise ValueError("Invalid restricted login outcome")
     port = value["dst_port"]
     if port is not None and (type(port) is not int or not 1 <= port <= 65535):
         raise ValueError("Invalid application event destination port")

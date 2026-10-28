@@ -10,6 +10,7 @@ import pytest
 
 from docker_smoke import ALICE_ID, assert_cascade, csrf, detail_evidence
 from security_lab import cli
+from security_lab import auth, config as security_config, records
 from security_lab.config import format_ist
 from security_lab.console import create_console_app
 from security_lab.crypto import open_record
@@ -150,8 +151,11 @@ def test_normal_forms_save_complete_evidence_and_timings_through_edit_and_reload
         assert alice[key] not in denied_html
 
 
-def test_actual_login_denial_rules_and_existing_cookie_block_survive_app_reload(lab):
+def test_actual_login_denial_rules_and_existing_cookie_block_survive_app_reload(lab, monkeypatch):
     config, keys, bob, admin = lab
+    clock = [security_config.utc_us()]
+    monkeypatch.setattr(auth, "utc_us", lambda: clock[0])
+    monkeypatch.setattr(records, "utc_us", lambda: clock[0])
     # Console admits only an administrator; a user's credentials cannot enter.
     login(admin, "bob", "BobDemo!2026", expected=401)
     assert request(admin, "GET", "/api/snapshot").status_code == 302
@@ -161,6 +165,8 @@ def test_actual_login_denial_rules_and_existing_cookie_block_survive_app_reload(
 
     for index in range(5):
         login(bob, "bob", f"wrong smoke password {index}", expected=401)
+    login(bob, "bob", "BobDemo!2026", expected=429)
+    clock[0] += 90_000_000
     login(bob, "bob", "BobDemo!2026")
     denied = request(bob, "GET", f"/records/{ALICE_ID}")
     assert denied.status_code == 403

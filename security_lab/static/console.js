@@ -67,10 +67,12 @@
       ])
     ));
     replace("alerts-list", table(
-      ["Time (IST)", "Rule and reason", "Flagged source", "Flagged username (attempted/authenticated context)", "Evidence"],
+      ["Time (IST)", "Rule and reason", "Flagged source", "Flagged username (attempted/authenticated context)", "R2 restriction expiry", "Evidence"],
       alerts.map(item => [
         time(item.time_ist), [item.rule, item.summary].filter(Boolean).join(": "),
-        item.src_ip, item.username || "Not provided", evidenceText(item.evidence)
+        item.src_ip, item.username || "Not provided",
+        item.restriction_expires_at_ist == null ? "—" : `${item.restriction_expires_at_ist} · ${item.restriction_remaining_seconds} seconds remaining`,
+        evidenceText(item.evidence)
       ])
     ));
 

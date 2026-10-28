@@ -81,8 +81,8 @@
       <p class="context-note">Flagged username means attempted or authenticated account context. It does not establish attacker identity.</p>
       <div id="alerts-list" class="table-wrap">
         {% if snapshot.alerts %}
-          <table><thead><tr><th>Time (IST)</th><th>Rule and reason</th><th>Flagged source</th><th>Flagged username</th><th>Evidence</th></tr></thead><tbody>
-          {% for alert in snapshot.alerts %}<tr><td>{{ alert.time_ist }}</td><td><strong>{{ alert.rule }}</strong><br>{{ alert.summary }}</td><td>{{ alert.src_ip or 'Unknown' }}</td><td>{{ alert.username or 'Not provided' }}<small>Attempted/authenticated context, not proof of attacker identity</small></td><td><code>{{ alert.evidence|tojson if alert.evidence is not none else 'No evidence supplied' }}</code></td></tr>{% endfor %}
+          <table><thead><tr><th>Time (IST)</th><th>Rule and reason</th><th>Flagged source</th><th>Flagged username</th><th>R2 restriction expiry</th><th>Evidence</th></tr></thead><tbody>
+          {% for alert in snapshot.alerts %}<tr><td>{{ alert.time_ist }}</td><td><strong>{{ alert.rule }}</strong><br>{{ alert.summary }}</td><td>{{ alert.src_ip or 'Unknown' }}</td><td>{{ alert.username or 'Not provided' }}<small>Attempted/authenticated context, not proof of attacker identity</small></td><td>{% if alert.restriction_expires_at_ist is not none %}<time>{{ alert.restriction_expires_at_ist }}</time><small>{{ alert.restriction_remaining_seconds }} seconds remaining</small>{% else %}—{% endif %}</td><td><code>{{ alert.evidence|tojson if alert.evidence is not none else 'No evidence supplied' }}</code></td></tr>{% endfor %}
           </tbody></table>
         {% else %}<p class="empty-state">No alerts in this domain.</p>{% endif %}
       </div>

@@ -145,3 +145,28 @@ test('superseded live polling cannot render under offline selection and immediat
   assert.equal(ui.maxActive(), 1, 'fetch and JSON lifetimes must never overlap');
   assert.equal(ui.ids.get('connection-warning').hidden, true);
 });
+
+test('each live refresh renders the current R2 restriction expiry', async () => {
+  const ui = browser();
+  const withExpiry = (expiry) => ({
+    ...snapshot('live', 'R2 restriction'),
+    alerts: [{ rule: 'R2', summary: 'Sign-in restricted', src_ip: '192.0.2.77', username: 'bob',
+      restriction_expires_at_us: 99_000_000, restriction_expires_at_ist: expiry,
+      restriction_remaining_seconds: 89, evidence: {}, time_ist: '2026-10-09T05:30:00.000000+05:30' }],
+  });
+
+  ui.requests[0].respond();
+  await turn();
+  ui.requests[0].finishJson(withExpiry('2026-10-29T12:00:00.000000+05:30'));
+  await turn();
+  assert.match(ui.ids.get('alerts-list').textContent, /2026-10-29T12:00:00\.000000\+05:30/);
+
+  ui.poll();
+  assert.equal(ui.requests.length, 2);
+  ui.requests[1].respond();
+  await turn();
+  ui.requests[1].finishJson(withExpiry('2026-10-29T12:00:02.000000+05:30'));
+  await turn();
+  assert.match(ui.ids.get('alerts-list').textContent, /2026-10-29T12:00:02\.000000\+05:30/);
+  assert.doesNotMatch(ui.ids.get('alerts-list').textContent, /2026-10-29T12:00:00/);
+});

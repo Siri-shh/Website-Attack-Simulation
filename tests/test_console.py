@@ -240,6 +240,41 @@ def test_snapshot_exposes_ist_capture_time_and_preserves_raw_utc(config, keys):
     assert result["capture"]["last_packet_at_ist"] == format_ist(captured)
 
 
+def test_snapshot_exposes_live_r2_restriction_expiry_and_nulls_other_alerts(config, keys, monkeypatch):
+    from security_lab import console
+
+    _seed(config)
+    now_us = 10_000_000
+    monkeypatch.setattr(console, "utc_us", lambda: now_us)
+    with transaction(config) as conn:
+        conn.executemany(
+            "INSERT INTO alerts(id,domain,rule,src_ip,username,session_ref,time_us,"
+            "trigger_event_id,severity,summary,evidence_json,dedup_key) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+            [
+                ("live-r2", "live", "R2", "192.0.2.10", "bob", None, 9_000_000,
+                 "event-live", "high", "Repeated failures", "{}", "live-r2"),
+                ("offline-r2", "offline:test", "R2", "192.0.2.10", "bob", None, 9_500_000,
+                 "event-offline", "high", "Offline replay", "{}", "offline-r2"),
+                ("live-r1", "live", "R1", "192.0.2.11", "bob", None, 9_000_000,
+                 "event-r1", "medium", "Other rule", "{}", "live-r1"),
+            ],
+        )
+
+    alerts = {item["id"]: item for item in snapshot(config, keys)["alerts"]}
+    live = alerts["live-r2"]
+    assert live["restriction_expires_at_us"] == 99_000_000
+    assert live["restriction_expires_at_ist"] == format_ist(99_000_000)
+    assert live["restriction_remaining_seconds"] == 89
+    assert alerts["live-r1"]["restriction_expires_at_us"] is None
+    assert alerts["live-r1"]["restriction_expires_at_ist"] is None
+    assert alerts["live-r1"]["restriction_remaining_seconds"] is None
+    offline = {item["id"]: item for item in snapshot(config, keys, "offline:test")["alerts"]}
+    assert offline["offline-r2"]["restriction_expires_at_us"] is None
+    assert offline["offline-r2"]["restriction_expires_at_ist"] is None
+    assert offline["offline-r2"]["restriction_remaining_seconds"] is None
+
+
 def test_snapshot_keeps_signed_logs_when_newer_packet_rows_exceed_shared_limit(config, keys):
     _seed(config)
     with transaction(config) as conn:

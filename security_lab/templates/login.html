@@ -1,14 +1,25 @@
 <!doctype html>
 <html lang="en">
-  <head><meta charset="utf-8"><title>Sign in</title></head>
-  <body>
-    <main>
-      <h1>Sign in</h1>
-      {% for message in get_flashed_messages() %}<p role="status">{{ message }}</p>{% endfor %}
-      <form method="post" action="{{ url_for('login') }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% if login_service == 'admin' %}Console administrator{% else %}Storage sign in{% endif %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+  </head>
+  <body class="login-page login-{{ login_service }}">
+    <main class="login-card">
+      <p class="login-service">{% if login_service == 'admin' %}Administration console{% else %}Secure storage{% endif %}</p>
+      <h1>{% if login_service == 'admin' %}Console administrator{% else %}Storage sign in{% endif %}</h1>
+      <p class="login-intro">Use your account to continue.</p>
+      {% for message in get_flashed_messages() %}<p class="login-status" role="status">{{ message }}</p>{% endfor %}
+      {% if login_error %}<p class="login-error" role="alert">{{ login_error }}</p>{% endif %}
+      {% if restriction_seconds is not none %}<p class="login-countdown" role="status">Try again in <strong>{{ restriction_seconds }} seconds</strong>.</p>{% endif %}
+      <form class="login-form" method="post" action="{{ url_for('login') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <label>Username <input name="username" autocomplete="username" required></label>
-        <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
+        <label for="username">Username</label>
+        <input id="username" name="username" autocomplete="username" required>
+        <label for="password">Password</label>
+        <input id="password" type="password" name="password" autocomplete="current-password" required>
         <button type="submit">Sign in</button>
       </form>
     </main>

@@ -90,6 +90,7 @@ def snapshot(config: Config, keys: KeyRing, domain: str = "live") -> dict:
             (domain,),
         ).fetchall()
         alerts = []
+        snapshot_time_us = utc_us()
         for row in alert_rows:
             item = {field: row[field] for field in _ALERT_FIELDS}
             try:
@@ -99,6 +100,13 @@ def snapshot(config: Config, keys: KeyRing, domain: str = "live") -> dict:
             item["evidence"] = evidence if isinstance(evidence, dict) else None
             item["time_utc"] = format_utc(row["time_us"])
             item["time_ist"] = format_ist(row["time_us"])
+            expiry_us = row["time_us"] + 90_000_000 if domain == "live" and row["domain"] == "live" and row["rule"] == "R2" else None
+            item["restriction_expires_at_us"] = expiry_us
+            item["restriction_expires_at_ist"] = format_ist(expiry_us) if expiry_us is not None else None
+            item["restriction_remaining_seconds"] = (
+                max(0, (expiry_us - snapshot_time_us + 999_999) // 1_000_000)
+                if expiry_us is not None else None
+            )
             alerts.append(item)
 
         blocks = [dict(row) for row in conn.execute(

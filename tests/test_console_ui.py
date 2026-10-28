@@ -10,6 +10,7 @@ from security_lab.audit import append_app_event
 from security_lab.db import transaction
 from security_lab.console import create_console_app
 from security_lab.config import format_ist
+from security_lab.storage import create_storage_app
 from werkzeug.security import generate_password_hash
 
 
@@ -95,6 +96,58 @@ def test_dashboard_labels_account_context_and_encrypted_network_metadata(real_co
     assert "attempted" in html and "authenticated" in html
     assert "attacker identity" in html
     assert "encrypted" in html and "metadata" in html
+
+
+def test_login_pages_distinguish_storage_countdown_and_admin_identity(config, keys, monkeypatch):
+    from security_lab import auth
+
+    now_us = 1_000_000_000
+    monkeypatch.setattr(auth, "utc_us", lambda: now_us)
+    with transaction(config) as conn:
+        conn.executemany(
+            "INSERT INTO users(username,role,password_hash,created_at_us) VALUES(?,?,?,?)",
+            [
+                ("bob", "user", generate_password_hash("BobPass!2026", method="scrypt"), 1),
+                ("admin", "admin", generate_password_hash("AdminPass!2026", method="scrypt"), 2),
+            ],
+        )
+    storage_app = create_storage_app(config, keys)
+    storage_app.config.update(TESTING=True)
+    storage_app.jinja_loader = FileSystemLoader(str(_TEMPLATE_ROOT))
+    storage_app.jinja_env.cache.clear()
+    storage = storage_app.test_client()
+    admin = create_console_app(config, keys)
+    admin.config.update(TESTING=True)
+    admin.jinja_loader = FileSystemLoader(str(_TEMPLATE_ROOT))
+    admin.jinja_env.cache.clear()
+    console = admin.test_client()
+
+    storage_page = storage.get("/login", base_url="https://localhost")
+    console_page = console.get("/login", base_url="https://localhost")
+    assert storage_page.status_code == console_page.status_code == 200
+    assert b"storage" in storage_page.data.lower()
+    assert b"console" in console_page.data.lower() and b"admin" in console_page.data.lower()
+    assert b'name="csrf_token"' in storage_page.data
+    assert b'name="csrf_token"' in console_page.data
+
+    with transaction(config) as conn:
+        conn.execute(
+            "INSERT INTO alerts(id,domain,rule,src_ip,username,session_ref,time_us,"
+            "trigger_event_id,severity,summary,evidence_json,dedup_key) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+            ("active-r2", "live", "R2", "192.0.2.77", "bob", None, now_us,
+             "event-r2", "high", "Repeated failures", "{}", "active-r2"),
+        )
+    token = re.search(rb'name="csrf_token" value="([^"]+)"', storage_page.data).group(1)
+    restricted = storage.post(
+        "/login", base_url="https://localhost",
+        data={"csrf_token": token, "username": "bob", "password": "BobPass!2026"},
+        environ_overrides={"REMOTE_ADDR": "192.0.2.77"}, follow_redirects=False,
+    )
+    assert restricted.status_code == 429
+    assert b"temporarily restricted" in restricted.data.lower()
+    assert b"90 seconds" in restricted.data
+    assert b'name="csrf_token"' in restricted.data
 
 
 def test_empty_and_degraded_capture_states_are_visible(real_console_client, config):

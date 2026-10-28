@@ -51,10 +51,10 @@
 
 **Interfaces:** Add `restriction_expiry_us(conn, *, src_ip: str, username: str, now_us: int) -> int | None` in `auth.py`, querying the newest matching `domain='live' AND rule='R2'` alert; return expiry only while `now_us < alert.time_us + 90_000_000`. Add audit kind/outcome `login_restricted_attempt` to the signed allowlist. Refactor login event insertion to accept the active connection. Login template context provides `login_service` (`storage` or `admin`), `login_error: str | None`, and `restriction_seconds: int | None`; restricted POST is 429 with ceiling-second `Retry-After`, ordinary fifth bad credential remains 401. Set the session only after the decision transaction commits.
 
-- [ ] **Step 1 — tests:** Add `test_r2_restricts_only_matching_ip_username_for_exact_90_seconds` asserting fifth failure 401/R2, same-pair correct password 429 with `Retry-After`, other pair unaffected, exact expiry success, and restricted attempts signed without another R2. Add `test_concurrent_fifth_and_sixth_login_serializes` with controlled transaction ordering; assert no successful bypass. Add manual-block precedence, existing-session, admin/offline isolation, and R3 90–120-second regression assertions.
-- [ ] **Step 2 — red check (controller):** `python -m pytest tests/test_auth.py tests/test_rules.py -q`; record the expected new-test failures in T27 report.
-- [ ] **Step 3 — implementation:** Keep CSRF and trusted peer normalization. Verify password before lock if needed, then make the authoritative block/R2 lookup and signed outcome append inside one `BEGIN IMMEDIATE` transaction. Clear prior identity on restricted/failure responses; keep existing authenticated sessions on unrelated requests. Avoid nested `_record_event` transactions.
-- [ ] **Step 4 — green check (controller):** Repeat focused command; inspect signed events and `git diff --check`. Sol independently reviews the final auth diff and test evidence before T27 is COMPLETE.
+- [x] **Step 1 — tests:** Add `test_r2_restricts_only_matching_ip_username_for_exact_90_seconds` asserting fifth failure 401/R2, same-pair correct password 429 with `Retry-After`, other pair unaffected, exact expiry success, and restricted attempts signed without another R2. Add `test_concurrent_fifth_and_sixth_login_serializes` with controlled transaction ordering; assert no successful bypass. Add manual-block precedence, existing-session, admin/offline isolation, and R3 90–120-second regression assertions.
+- [x] **Step 2 — red check (controller):** `python -m pytest tests/test_auth.py tests/test_rules.py -q`; record the expected new-test failures in T27 report.
+- [x] **Step 3 — implementation:** Keep CSRF and trusted peer normalization. Verify password before lock if needed, then make the authoritative block/R2 lookup and signed outcome append inside one `BEGIN IMMEDIATE` transaction. Clear prior identity on restricted/failure responses; keep existing authenticated sessions on unrelated requests. Avoid nested `_record_event` transactions.
+- [x] **Step 4 — green check (controller):** Repeat focused command; inspect signed events and `git diff --check`. Sol independently reviews the final auth diff and test evidence before T27 is COMPLETE.
 
 ### Task T28: Countdown, console expiry, and login presentation
 
@@ -64,16 +64,16 @@
 
 **Interfaces:** For each live R2 alert in `snapshot`, add `restriction_expires_at_us`, `restriction_expires_at_ist`, and `restriction_remaining_seconds`; for offline or other rules these fields are null. `console.js` renders expiry from these fields on every 2-second refresh. The login template consumes T27's three context values; when restricted, show remaining seconds and preserve the 429 status. Keep CSRF fields and both service forms working.
 
-- [ ] **Step 1 — tests:** Add snapshot assertions for live R2 expiry/remaining and offline-null fields, template assertion for storage countdown and distinct console label, and Node polling assertion that the refreshed R2 expiry remains visible.
-- [ ] **Step 2 — red check (controller):** `python -m pytest tests/test_console.py tests/test_console_ui.py -q` and `node --test tests/console_polling.test.cjs`; record new-test failures.
-- [ ] **Step 3 — implementation:** Add the three allowlisted fields, table cell and polling mapping. Use one centered login card (maximum 420 px), plain off-white background, a narrow existing-palette accent border (storage navy; console blue), two stacked labelled fields, visible focus ring, and inline error/countdown; no gradients, illustrations, icons, or attack-demo affordance. Escape user-controlled text through templates/`textContent`.
-- [ ] **Step 4 — green/milestone check (controller):** Repeat focused Python and Node commands; run `python -m pytest tests/test_auth.py tests/test_rules.py tests/test_console.py tests/test_console_ui.py -q`; obtain one Sol review of T28 UI plus M10 behavior. Update reports/ledger/checkboxes.
+- [x] **Step 1 — tests:** Add snapshot assertions for live R2 expiry/remaining and offline-null fields, template assertion for storage countdown and distinct console label, and Node polling assertion that the refreshed R2 expiry remains visible.
+- [x] **Step 2 — red check (controller):** `python -m pytest tests/test_console.py tests/test_console_ui.py -q` and `node --test tests/console_polling.test.cjs`; record new-test failures.
+- [x] **Step 3 — implementation:** Add the three allowlisted fields, table cell and polling mapping. Use one centered login card (maximum 420 px), plain off-white background, a narrow existing-palette accent border (storage navy; console blue), two stacked labelled fields, visible focus ring, and inline error/countdown; no gradients, illustrations, icons, or attack-demo affordance. Escape user-controlled text through templates/`textContent`.
+- [x] **Step 4 — green/milestone check (controller):** Repeat focused Python and Node commands; run `python -m pytest tests/test_auth.py tests/test_rules.py tests/test_console.py tests/test_console_ui.py -q`; obtain one Sol review of T28 UI plus M10 behavior. Update reports/ledger/checkboxes.
 
 **M10 checkpoint commands (controller only, after all checks/review pass):**
 
 ```powershell
 git diff --check
-git add -- security_lab/auth.py security_lab/audit.py security_lab/console.py security_lab/templates/console/dashboard.html security_lab/templates/login.html security_lab/static/console.js security_lab/static/console.css security_lab/static/login.css tests/test_auth.py tests/test_rules.py tests/test_console.py tests/test_console_ui.py tests/console_polling.test.cjs docs/superpowers/plans/2026-10-29-image-lockout-graphs-plan.md docs/implementation/PROGRESS.md docs/implementation/DECISIONS.md docs/implementation/reports/T27.md docs/implementation/reports/T28.md
+git add -- security_lab/auth.py security_lab/audit.py security_lab/console.py security_lab/templates/console/dashboard.html security_lab/templates/login.html security_lab/static/console.js security_lab/static/console.css security_lab/static/login.css tests/test_auth.py tests/test_rules.py tests/test_smoke.py tests/test_console.py tests/test_console_ui.py tests/console_polling.test.cjs docs/superpowers/plans/2026-10-29-image-lockout-graphs-plan.md docs/implementation/PROGRESS.md docs/implementation/DECISIONS.md docs/implementation/reports/T27.md docs/implementation/reports/T28.md
 git diff --cached --check
 git diff --cached --stat
 git commit -m "feat: restrict R2 sign-ins and show cooldown"
@@ -187,4 +187,4 @@ git tag checkpoint/m12-crypto-graphs
 
 The controller must record the user's plan approval in `PROGRESS.md` before dispatching T27. On interruption, preserve the current task phase, assigned files/model, base commit, test output, review status, and next exact action in its report and `PROGRESS.md`; use the bounded WIP procedure in `docs/RESUME.md` if necessary. Never rerun completed tasks solely because a conversation or worker disappeared. Existing account-switch instructions in `docs/RESUME.md` remain authoritative; keep this repository and `.git` together.
 
-This plan is awaiting user review. No T27–T34 product implementation has begun.
+The user approved this plan on 29 October 2026 with "okay now implement the plan". T27 began on `feature/image-lockout-graphs` from `d4d2382`.
