@@ -3,9 +3,10 @@
 Plan: `docs/superpowers/plans/2026-10-09-storage-security-plan.md`
 Spec: `docs/superpowers/specs/2026-10-09-storage-security-design.md`
 Status: **COMPLETE THROUGH T25**
+Proposed extension: docs/superpowers/specs/2026-10-28-image-lockout-graphs-design.md is in design review. Builder check found no unanswered user decisions. Await user approval of the written design before writing an implementation plan or changing product code. T01-T25 unchanged; safe tamper deferred.
 Execution approval: user's “continue” on 9 October 2026 authorizes the written plan and selected Luna/Sol delegation.
 Current milestone: T25 IST timestamp display complete; tag `checkpoint/t25-ist-display`.
-Next action: None. Safe tamper remains deferred.
+Next action: Obtain user approval of the proposed extension design; T25 remains complete. Safe tamper remains deferred.
 Current task base commit: `e5f5d52` for T22 (prior T21 details remain in its report).
 Active T22 spec: `docs/superpowers/specs/2026-10-10-crypto-analysis-safe-tamper-design.md`. Current task phase: M9 complete. T23 committed at 968c7f5; T24 integrated and verified. Final checkpoint commit/tag recorded below.
 Current branch: `feature/storage-security`.
