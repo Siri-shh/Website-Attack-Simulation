@@ -1,6 +1,6 @@
 # Image records, R2 sign-in restriction, and cryptography graphs
 
-Date: 28 October 2026. Status: proposed design, awaiting user approval. This extends the existing storage-security project; the earlier completed milestones remain in force. Safe tamper remains on hold.
+Date: 28 October 2026. Status: approved by the user's "build it" instruction on 29 October 2026. This extends the existing storage-security project; the earlier completed milestones remain in force. Safe tamper remains on hold.
 
 ## Intent and current baseline
 

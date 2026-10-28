@@ -3,10 +3,12 @@
 Plan: `docs/superpowers/plans/2026-10-09-storage-security-plan.md`
 Spec: `docs/superpowers/specs/2026-10-09-storage-security-design.md`
 Status: **COMPLETE THROUGH T25**
-Proposed extension: docs/superpowers/specs/2026-10-28-image-lockout-graphs-design.md is in design review. Builder check found no unanswered user decisions. Await user approval of the written design before writing an implementation plan or changing product code. T01-T25 unchanged; safe tamper deferred.
+Extension plan: `docs/superpowers/plans/2026-10-29-image-lockout-graphs-plan.md`
+Extension spec: `docs/superpowers/specs/2026-10-28-image-lockout-graphs-design.md`
+Extension status: **AWAITING_PLAN_REVIEW**. The user approved the design with "build it" on 29 October 2026. The written plan is complete and pending review; no T27-T34 product implementation has started. T01-T25 remain complete; safe tamper remains deferred.
 Execution approval: user's “continue” on 9 October 2026 authorizes the written plan and selected Luna/Sol delegation.
 Current milestone: T25 IST timestamp display complete; tag `checkpoint/t25-ist-display`.
-Next action: Obtain user approval of the proposed extension design; T25 remains complete. Safe tamper remains deferred.
+Next action: Ask the user to review the extension plan. After approval, record that approval here and begin T27 at its test phase. T25 remains complete; safe tamper remains deferred.
 Current task base commit: `e5f5d52` for T22 (prior T21 details remain in its report).
 Active T22 spec: `docs/superpowers/specs/2026-10-10-crypto-analysis-safe-tamper-design.md`. Current task phase: M9 complete. T23 committed at 968c7f5; T24 integrated and verified. Final checkpoint commit/tag recorded below.
 Current branch: `feature/storage-security`.
@@ -77,6 +79,6 @@ Historical interruption: the T11 worker hit the workspace spend cap; work was sa
 
 Completion: Docker server/client remain running and healthy; storage8443/admin8444 bindlocalhost. All checkpoint tags M0–M7 preserve local history on feature/storage-security. No push/merge/reset or removal of runtime records/history was performed. T20 transient Sol spend cap recovered through the same required Sol model; no substitution.
 
-## Startup recovery � 9 October 2026
+## Startup recovery — 9 October 2026
 
 User reported server Started then disappeared from compose ps. Controller confirmed Exited(1), Running=false, Pid=0; logs refused existing /app/data/server.pid. Marker recorded container PID 1; only client container was running, neither host website port was listening, and no Windows security_lab serve process was found. GPT-6.1 Sol (high) reviewed the bounded manual recovery and returned PASS. Controller removed only this checkout's data/server.pid and ran docker compose up -d. Both client CA-verified HTTPS requests and host curl --cacert requests to /login returned 200 on 8443 and 8444; compose ps reported server healthy. Database, keys, captures and source preserved. Earlier shutdown cause unconfirmed. Report: reports/startup-recovery-2026-10-09.md. T21 remains at its recorded phase.

@@ -1,0 +1,7 @@
+# T26 planning contracts — 29 October 2026
+
+Reviewer/designer: gpt-6-sol, high reasoning, read-only. The user explicitly authorized this model as the available substitute for gpt-6.1-sol. The worker did not run shell/Git commands, edit files, install dependencies, or run tests. The controller inspected repository files and wrote the plan.
+
+The approved design is implemented by `docs/superpowers/plans/2026-10-29-image-lockout-graphs-plan.md`. The reasoning review fixed these contracts before implementation: old v1 envelopes stay byte-for-byte valid; new saves use explicit v2 schema and a signed image descriptor rather than placing the whole BLOB in the envelope; retained images are decrypted and re-encrypted with version-bound AAD; a live R2 expiry is derived from the persisted alert and checked with the signed login decision under one immediate SQLite transaction. The separate record/admin graph inputs and timing meanings are fixed in the plan. Pillow 12.3.0 is pinned for decoded PNG/JPEG validation; the controller checked its available version before pinning. No product code has changed.
+
+Plan self-review: the spec's image, R2, graphical metric, login, security-isolation, test, and recovery requirements map to T27-T34. The plan names each task's files, interfaces, red/green controller checks, model, report, and milestone Git commands. Five likely failure modes are assigned tests in the Review Focus section. Plan awaits user review; this report is not test or implementation evidence.
