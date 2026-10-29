@@ -59,6 +59,12 @@ def test_init_seeds_fixed_ids_valid_roles_scrypt_and_encrypted_records(configure
         snapshot = snapshots[record_id]
         assert row["owner"] == owner and row["version"] == 1
         assert snapshot["owner"] == owner and snapshot["version"] == 1
+        assert row["envelope_schema"] == snapshot["envelope_schema"] == 2
+        image_columns = (
+            "image_nonce", "image_ciphertext", "image_mime", "image_size",
+            "image_plain_sha256", "image_cipher_sha256", "image_encrypt_ns", "image_hash_ns",
+        )
+        assert all(row[field] is None and snapshot[field] is None for field in image_columns)
         for field in ("nonce_b64", "ciphertext_b64", "sha256_hex", "signature_b64"):
             assert snapshot[field] == row[field]
         plaintext = open_record(keys, row)

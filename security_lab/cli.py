@@ -26,7 +26,7 @@ from .crypto import seal_record
 from .db import initialize_database, transaction
 from .identity import ensure_certificate, load_or_create_keys
 from .pcap import analyze_pcap
-from .records import insert_record_version
+from .records import _RECORD_FIELDS, insert_record_version
 from .storage import create_storage_app
 
 
@@ -39,12 +39,6 @@ _SEED_USERS = (
 _SEED_RECORDS = (
     ("00000000000000000000000000000001", "bob", "Bob's record", "Bob's ordinary demonstration record."),
     ("00000000000000000000000000000002", "alice", "Alice's record", "Alice's ordinary demonstration record."),
-)
-_RECORD_COLUMNS = (
-    "id", "owner", "version", "nonce_b64", "ciphertext_b64", "sha256_hex",
-    "signature_b64", "created_at_us", "updated_at_us", "generated_at_us",
-    "plaintext_bytes", "ciphertext_bytes", "envelope_bytes", "encryption_ns",
-    "hashing_ns", "signing_ns",
 )
 _MARKER_HINT = (
     "Inspect the recorded process before proceeding. Only after confirming that "
@@ -67,9 +61,9 @@ def _seed(config, keys):
             row = seal_record(keys, record_id=record_id, owner=owner, version=1,
                               title=title, body=body, created_at_us=now, saved_at_us=now)
             conn.execute(
-                "INSERT INTO records (" + ",".join(_RECORD_COLUMNS) + ") VALUES ("
-                + ",".join("?" for _ in _RECORD_COLUMNS) + ")",
-                tuple(row[column] for column in _RECORD_COLUMNS),
+                "INSERT INTO records (" + ",".join(_RECORD_FIELDS) + ") VALUES ("
+                + ",".join("?" for _ in _RECORD_FIELDS) + ")",
+                tuple(row[column] for column in _RECORD_FIELDS),
             )
             insert_record_version(conn, row)
 

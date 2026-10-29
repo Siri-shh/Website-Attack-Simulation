@@ -14,7 +14,7 @@ from PIL import Image
 from security_lab import records
 from security_lab.audit import verify_app_event
 from security_lab.config import format_ist
-from security_lab.crypto import open_record_image
+from security_lab.crypto import open_record_image, open_record_measured
 from security_lab.db import connect, transaction
 
 
@@ -155,8 +155,10 @@ def test_detail_escapes_script_title_and_uses_saved_timings_without_regeneration
         raise AssertionError("detail GET must not regenerate record cryptography")
 
     monkeypatch.setattr(records, "seal_record", no_regeneration)
+    before_reads = {table: _rows(config, table) for table in ("records", "record_versions")}
     paths = [f"/records/{saved['id']}"] * 2
     responses = [real_storage_client.get(path, base_url="https://localhost") for path in paths]
+    after_reads = {table: _rows(config, table) for table in ("records", "record_versions")}
 
     assert all(response.status_code == 200 for response in responses)
     html = [response.get_data(as_text=True) for response in responses]
@@ -167,7 +169,161 @@ def test_detail_escapes_script_title_and_uses_saved_timings_without_regeneration
     assert all("0.000050" in page for page in html)
     assert all(saved["nonce_b64"] in page and saved["signature_b64"] in page for page in html)
     assert all("Measured operation durations for this saved version" in page for page in html)
-    assert html[0] == html[1]
+    assert after_reads == before_reads
+
+
+def test_detail_passes_transient_current_read_timings_without_changing_saved_evidence(
+    real_storage_client, config, keys, monkeypatch,
+):
+    from security_lab import storage
+
+    _login(real_storage_client)
+    saved = _saved(config, keys, image_bytes=_image(), image_mime="image/png")
+    before = {table: _rows(config, table) for table in ("records", "record_versions")}
+    measured = {
+        "hash_verification_ns": 11_000,
+        "signature_verification_ns": 22_000,
+        "text_decryption_ns": 33_000,
+        "image_decryption_ns": 44_000,
+    }
+    measured_versions = []
+
+    def fixed_measurements(keyring, row):
+        measured_versions.append(row["version"])
+        text, image, _ = open_record_measured(keyring, row)
+        assert image == _image()
+        return text, image, measured
+
+    monkeypatch.setattr(storage, "open_record_measured", fixed_measurements, raising=False)
+    original_render = storage.render_template
+    contexts = []
+
+    def capture_render(template, **context):
+        if template == "storage/detail.html":
+            contexts.append(context)
+        return original_render(template, **context)
+
+    monkeypatch.setattr(storage, "render_template", capture_render)
+    response = real_storage_client.get(f"/records/{saved['id']}", base_url="https://localhost")
+
+    assert response.status_code == 200
+    assert "no-store" in response.headers["Cache-Control"]
+    assert measured_versions == [saved["version"]]
+    assert contexts[-1]["read_timings"] == measured
+    assert contexts[-1]["record"] == saved
+    assert contexts[-1]["plaintext"] == {"title": "Evidence title", "body": "Evidence body"}
+    for table, rows in before.items():
+        assert _rows(config, table) == rows
+
+
+def test_detail_graph_uses_saved_sizes_and_durations_and_labels_one_point(
+    real_storage_client, config, keys, monkeypatch,
+):
+    _login(real_storage_client)
+    original = records.seal_record
+
+    def seal_with_fixed_timings(*args, **kwargs):
+        row = original(*args, **kwargs)
+        row.update(encryption_ns=1200, hashing_ns=3400, signing_ns=5600,
+                   image_encrypt_ns=7800, image_hash_ns=9000)
+        return row
+
+    monkeypatch.setattr(records, "seal_record", seal_with_fixed_timings)
+    saved = _saved(config, keys, body="saved plaintext sample", image_bytes=_image(), image_mime="image/png")
+    response = real_storage_client.get(f"/records/{saved['id']}", base_url="https://localhost")
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Saved version measurements" in html
+    assert "bytes" in html and "ns" in html
+    assert "Input size labels each row; horizontal bar length encodes duration in ns" in html
+    assert "Durations in ns are exact; ms values are rounded to six decimal places." in html
+    assert "throughput values are rounded to six decimal places" in html.lower()
+    assert "one saved version" in html.lower()
+    assert "not a trend" in html.lower()
+    for value in (str(saved["plaintext_bytes"]), str(saved["ciphertext_bytes"]),
+                  str(saved["envelope_bytes"]), "1200", "3400", "5600"):
+        assert value in html
+    assert str(saved["image_size"]) in html
+    assert str(saved["image_encrypt_ns"]) in html
+    assert str(saved["image_hash_ns"]) in html
+    image_hash_bytes = 2 * saved["image_size"] + 16
+    image_hash_mib_per_s = image_hash_bytes * 1_000_000_000 / (saved["image_hash_ns"] * 1_048_576)
+    assert "2 × image bytes + 16 bytes hashed" in html
+    assert str(image_hash_bytes) in html
+    assert f"{image_hash_mib_per_s:.6f}" in html
+    assert "image aes-gcm encryption" in html.lower()
+    assert "SHA-256" in html and "Ed25519" in html
+
+
+def test_detail_labels_current_read_measurements_as_transient(
+    real_storage_client, config, keys, monkeypatch,
+):
+    from security_lab import storage
+
+    _login(real_storage_client)
+    saved = _saved(config, keys)
+    measured = {
+        "hash_verification_ns": 101,
+        "signature_verification_ns": 202,
+        "text_decryption_ns": 303,
+        "image_decryption_ns": None,
+    }
+    monkeypatch.setattr(storage, "open_record_measured", lambda keyring, row: (
+        {"title": "Evidence title", "body": "Evidence body"}, None, measured
+    ), raising=False)
+    response = real_storage_client.get(f"/records/{saved['id']}", base_url="https://localhost")
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Current read measurements · transient" in html
+    assert "not saved" in html.lower()
+    for label, value in (("Hash verification", "101"), ("Signature verification", "202"),
+                         ("Text decryption", "303")):
+        assert label in html and value in html
+    assert "Image decryption" in html and "Not applicable" in html
+
+
+def test_storage_chart_rules_have_dark_mode_contrast():
+    css = (_TEMPLATE_ROOT.parent / "static" / "storage.css").read_text(encoding="utf-8")
+    dark_start = css.rfind("@media (prefers-color-scheme: dark)")
+    assert dark_start >= 0
+    dark_rules = css[dark_start:]
+    assert ".transient-read-measurements" in dark_rules and "background:" in dark_rules
+    assert ".chart-data-table thead th" in dark_rules and "background:" in dark_rules
+
+
+def test_detail_version_series_uses_each_saved_row_measurement(
+    real_storage_client, config, keys, monkeypatch,
+):
+    _login(real_storage_client)
+    original = records.seal_record
+    elapsed = iter(((1100, 2100, 3100), (4100, 5100, 6100)))
+
+    def seal_with_distinct_saved_timings(*args, **kwargs):
+        row = original(*args, **kwargs)
+        encryption_ns, hashing_ns, signing_ns = next(elapsed)
+        row.update(encryption_ns=encryption_ns, hashing_ns=hashing_ns, signing_ns=signing_ns)
+        return row
+
+    monkeypatch.setattr(records, "seal_record", seal_with_distinct_saved_timings)
+    first = _saved(config, keys, body="first version")
+    second = records.save_record(
+        config, keys, owner="alice", record_id=first["id"],
+        title="Second version has different size", body="second version is longer",
+        src_ip="192.0.2.10", session_ref="test-session",
+    )
+    response = real_storage_client.get(f"/records/{second['id']}", base_url="https://localhost")
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Saved measurements by version" in html
+    assert "Version 1" in html and "Version 2" in html
+    for row, values in ((first, ("1100", "2100", "3100")),
+                        (second, ("4100", "5100", "6100"))):
+        for value in (str(row["plaintext_bytes"]), str(row["ciphertext_bytes"]),
+                      str(row["envelope_bytes"]), *values):
+            assert value in html
 
 
 def test_record_forms_offer_multipart_png_jpeg_upload_and_edit_actions(real_storage_client, config, keys):

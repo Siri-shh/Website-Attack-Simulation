@@ -60,12 +60,57 @@ def detail_evidence(html):
     """Extract full displayed evidence for persisted-version comparisons."""
     values = re.findall(r'<pre class="evidence-value">([^<]*)</pre>', html)
     times = re.findall(r'<time datetime="([^"]+)">', html)
-    sizes = re.findall(r'<dd>(\d+) bytes</dd>', html)
-    durations = re.findall(r'<td>(\d+\.\d{6}) ms</td>', html)
     version = re.search(r'Record · version (\d+)', html)
-    check(len(values) == 4 and len(times) == 3 and len(sizes) == 3
-          and len(durations) == 3 and version is not None,
+    check(len(values) == 4 and len(times) == 3 and version is not None,
           "Incomplete record evidence/timestamp/timing presentation")
+    current_version = int(version.group(1))
+
+    size_table = re.search(
+        r'<table class="chart-data-table">\s*'
+        r'<caption>Saved plaintext, ciphertext, envelope, and image sizes by version · bytes</caption>'
+        r'(.*?)</table>', html, re.DOTALL,
+    )
+    size_row = re.search(
+        r'<tbody>\s*<tr><th scope="row">Version (\d+)</th>'
+        r'<td>(\d+)</td><td>(\d+)</td><td>(\d+)</td><td>(?:\d+|No image)</td></tr>',
+        size_table.group(1), re.DOTALL,
+    ) if size_table else None
+    check(size_row is not None and int(size_row.group(1)) == current_version,
+          "Missing current-version saved size table row")
+    sizes = list(size_row.groups()[1:])
+
+    durations = []
+    for chart_id, expected_size in (
+        ("text-aes", sizes[0]),
+        ("envelope-hash", sizes[2]),
+        ("envelope-sign", sizes[2]),
+    ):
+        section = re.search(
+            rf'<section class="saved-measurement" aria-labelledby="{chart_id}-title">'
+            r'(.*?)</section>', html, re.DOTALL,
+        )
+        check(section is not None, f"Missing {chart_id} saved measurement section")
+        duration_chart = re.search(
+            r'<figure class="horizontal-chart" aria-label="[^"]+ duration by saved version">'
+            r'(.*?)</figure>', section.group(1), re.DOTALL,
+        )
+        duration_table = re.search(
+            r'<table class="chart-data-table">\s*<caption>[^<]* · Durations in ns are exact; '
+            r'ms values are rounded to six decimal places\.</caption>(.*?)</table>',
+            section.group(1), re.DOTALL,
+        )
+        duration_row = re.search(
+            r'<tbody>\s*<tr><th scope="row">Version (\d+)</th>'
+            r'<td>(\d+)</td><td>(\d+)</td><td>(\d+\.\d{6})</td></tr>',
+            duration_table.group(1), re.DOTALL,
+        ) if duration_table else None
+        check(duration_chart is not None and 'class="bar-track"' in duration_chart.group(1)
+              and duration_row is not None
+              and int(duration_row.group(1)) == current_version
+              and duration_row.group(2) == expected_size,
+              f"Missing current-version {chart_id} duration chart/table")
+        durations.append(duration_row.group(4))
+
     cipher, nonce, digest, signature = [unescape(value) for value in values]
     try:
         cipher_bytes = base64.b64decode(cipher, validate=True)
@@ -82,13 +127,12 @@ def detail_evidence(html):
     check(instants[0] <= instants[1] == instants[2], "Record timestamp ordering changed")
     check(len(cipher_bytes) == int(sizes[1]) == int(sizes[0]) + 16
           and int(sizes[2]) > len(cipher_bytes), "Displayed input/envelope sizes disagree")
-    check(all(Decimal(value) >= 0 for value in durations)
-          and html.count('class="timing-track"') == 3,
+    check(all(Decimal(value) >= 0 for value in durations),
           "Missing measured durations or timing bars")
     check("Digital signature verification passed" in html
           and "Envelope hash verification passed" in html,
           "Record evidence is not reported verified")
-    return {"version": int(version.group(1)), "ciphertext_b64": cipher,
+    return {"version": current_version, "ciphertext_b64": cipher,
             "nonce_b64": nonce, "sha256_hex": digest, "signature_b64": signature,
             "times": times, "sizes": [int(value) for value in sizes],
             "durations_ms": durations}

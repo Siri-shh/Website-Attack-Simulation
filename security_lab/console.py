@@ -11,7 +11,9 @@ from .auth import check_csrf, configure_auth, csrf_token, require_login
 from .config import Config, format_ist, format_utc, normalize_ip, utc_us
 from .db import connect, transaction
 from .identity import KeyRing
-from .analysis import aes_gcm_analysis, aes_primitive_analysis, sha256_analysis
+from .analysis import (
+    aes_gcm_analysis, aes_primitive_analysis, benchmark_size_sweep, sha256_analysis,
+)
 
 
 _EVENT_FIELDS = (
@@ -252,5 +254,15 @@ def create_console_app(config: Config, keys: KeyRing) -> Flask:
     @require_login("admin")
     def analysis_aes_primitive():
         return run_analysis("aes-primitive", aes_primitive_analysis)
+
+    @app.post("/analysis/size-sweep")
+    @require_login("admin")
+    def analysis_size_sweep():
+        check_csrf()
+        try:
+            result = benchmark_size_sweep()
+        except Exception:
+            return render_analysis(error="Analysis could not be completed.", status=500)
+        return render_analysis(result, "size-sweep")
 
     return app

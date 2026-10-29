@@ -46,7 +46,73 @@
     </form>
   </section>
 
-  {% if result_type == 'aes-gcm' %}
+  <form class="analysis-form size-sweep-form" method="post" action="{{ url_for('analysis_size_sweep') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <p>Run the bounded five-size benchmark using temporary in-memory inputs.</p>
+    <button type="submit">Run size sweep</button>
+  </form>
+
+  {% if result_type == 'size-sweep' %}
+  {% set operations = [
+    ('aes_encrypt', 'AES encrypt · AES-GCM encryption'),
+    ('aes_decrypt', 'AES decrypt · AES-GCM decryption'),
+    ('sha256', 'sha256 · SHA-256 hashing'),
+    ('ed25519_sign', 'ed25519 sign · Ed25519 signing'),
+    ('ed25519_verify', 'ed25519 verify · Ed25519 verification')
+  ] %}
+  <section class="panel result-panel" aria-labelledby="sweep-result-title">
+    <p class="eyebrow">Transient size sweep</p>
+    <h2 id="sweep-result-title">Size sweep measurements</h2>
+    <p>Five approved input sizes; {{ result.samples_per_size }} samples per size. Measurements use local Python/API calls and are not stored with records.</p>
+    <p class="chart-axis">Input size is the row category; horizontal bar length encodes median duration in ns, scaled to the largest median in each operation group. The separate throughput chart uses bar length for MiB/s. Median and p95 durations are reported in ns; throughput values are rounded to six decimal places.</p>
+    {% for operation, operation_title in operations %}
+      {% set max_median = namespace(value=0) %}
+      {% for point in result.points %}
+        {% if point[operation].median_ns > max_median.value %}{% set max_median.value = point[operation].median_ns %}{% endif %}
+      {% endfor %}
+      {% set max_rate = namespace(value=0.0) %}
+      {% for point in result.points %}
+        {% if point[operation].mib_per_s > max_rate.value %}{% set max_rate.value = point[operation].mib_per_s %}{% endif %}
+      {% endfor %}
+      <section class="sweep-operation" aria-labelledby="sweep-{{ operation }}-title">
+        <h3 id="sweep-{{ operation }}-title">{{ operation_title }}</h3>
+        <figure class="horizontal-chart" aria-label="{{ operation_title }} median duration by input size">
+          <figcaption>Median duration · ns</figcaption>
+          <ol class="horizontal-bars">
+            {% for point in result.points %}
+              <li class="horizontal-bar-row">
+                <span class="bar-label">{{ point.input_bytes }} bytes</span>
+                <span class="bar-track" aria-hidden="true"><span class="bar-fill" style="width: {{ (100 * point[operation].median_ns / max_median.value if max_median.value else 0)|round(2) }}%"></span></span>
+                <span class="bar-value">{{ point[operation].median_ns }} ns</span>
+              </li>
+            {% endfor %}
+          </ol>
+        </figure>
+        <figure class="horizontal-chart throughput-chart" aria-label="{{ operation_title }} throughput by input size">
+          <figcaption>Payload throughput · MiB/s · rounded to six decimal places</figcaption>
+          <ol class="horizontal-bars">
+            {% for point in result.points %}
+              <li class="horizontal-bar-row">
+                <span class="bar-label">{{ point.input_bytes }} bytes</span>
+                <span class="bar-track" aria-hidden="true"><span class="bar-fill bar-fill-secondary" style="width: {{ (100 * point[operation].mib_per_s / max_rate.value if max_rate.value else 0)|round(2) }}%"></span></span>
+                <span class="bar-value">{{ "%.6f"|format(point[operation].mib_per_s) }} MiB/s</span>
+              </li>
+            {% endfor %}
+          </ol>
+        </figure>
+        <div class="chart-scroll-region" role="region" tabindex="0" aria-label="{{ operation_title }} results table">
+        <table class="chart-data-table">
+          <caption>{{ operation_title }} by input size · median and p95 durations in ns, throughput in MiB/s rounded to six decimal places</caption>
+          <thead><tr><th scope="col">Input size (bytes)</th><th scope="col">Median duration (ns)</th><th scope="col">p95 duration (ns)</th><th scope="col">Throughput (MiB/s)</th></tr></thead>
+          <tbody>{% for point in result.points %}
+            <tr><th scope="row">{{ point.input_bytes }}</th><td>{{ point[operation].median_ns }}</td><td>{{ point[operation].p95_ns }}</td><td>{{ "%.6f"|format(point[operation].mib_per_s) }}</td></tr>
+          {% endfor %}</tbody>
+        </table>
+        </div>
+      </section>
+    {% endfor %}
+  </section>
+  {% elif result_type == 'aes-gcm' %}
   <section class="panel result-panel" aria-labelledby="gcm-result-title">
     <p class="eyebrow">AES-256-GCM</p><h2 id="gcm-result-title">Authenticated encryption measurements</h2>
     <p>These are local Python/API operation timings, including allocation and call overhead. They are not hardware AES throughput figures.</p>
@@ -66,11 +132,39 @@
   <section class="panel result-panel" aria-labelledby="sha-result-title">
     <p class="eyebrow">SHA-256</p><h2 id="sha-result-title">Full digest and bounded searches</h2>
     <p><strong>Input bytes:</strong> {{ result.input_bytes }} · <strong>Full 256-bit digest:</strong> <code>{{ result.target_digest_hex }}</code></p>
-    <p>Generic preimage and second-preimage work for SHA-256 is about 2<sup>256</sup>; generic collision work is about 2<sup>128</sup>. A no-match result in these bounded searches is expected and is not proof of resistance.</p>
+    <h3>Bounded SHA-256 search measurements</h3>
+    <p>These small searches have a fixed candidate budget. A no-match result in these bounded searches is expected and is not proof of resistance.</p>
+    {% set max_attempts = namespace(value=0) %}{% set max_elapsed = namespace(value=0) %}
+    {% for key, title in [('preimage', 'Preimage search'), ('second_preimage', 'Second-preimage search'), ('collision', 'Collision search')] %}
+      {% if result[key].attempts > max_attempts.value %}{% set max_attempts.value = result[key].attempts %}{% endif %}
+      {% if result[key].elapsed_ns > max_elapsed.value %}{% set max_elapsed.value = result[key].elapsed_ns %}{% endif %}
+    {% endfor %}
     {% for key, title in [('preimage', 'Preimage search'), ('second_preimage', 'Second-preimage search'), ('collision', 'Collision search')] %}
       {% set panel = result[key] %}
       <article class="search-result"><h3>{{ title }}</h3>
-        <p>Budget {{ panel.budget }} · attempts {{ panel.attempts }} · elapsed {{ panel.elapsed_ns }} ns · {{ 'match found' if panel.found else 'no match found' }}</p>
+        <p>Budget {{ panel.budget }} · {{ 'match found' if panel.found else 'no match found' }}.</p>
+        <figure class="horizontal-chart" aria-label="{{ title }} attempt count">
+          <figcaption>Attempts · count</figcaption>
+          <ol class="horizontal-bars"><li class="horizontal-bar-row">
+            <span class="bar-label">{{ title }}</span>
+            <span class="bar-track" aria-hidden="true"><span class="bar-fill" style="width: {{ (100 * panel.attempts / max_attempts.value if max_attempts.value else 0)|round(2) }}%"></span></span>
+            <span class="bar-value">{{ panel.attempts }} attempts</span>
+          </li></ol>
+        </figure>
+        <figure class="horizontal-chart" aria-label="{{ title }} elapsed time">
+          <figcaption>Elapsed time · ns</figcaption>
+          <ol class="horizontal-bars"><li class="horizontal-bar-row">
+            <span class="bar-label">{{ title }}</span>
+            <span class="bar-track" aria-hidden="true"><span class="bar-fill bar-fill-secondary" style="width: {{ (100 * panel.elapsed_ns / max_elapsed.value if max_elapsed.value else 0)|round(2) }}%"></span></span>
+            <span class="bar-value">{{ panel.elapsed_ns }} ns ({{ "%.6f"|format(panel.elapsed_ns / 1000000) }} ms)</span>
+          </li></ol>
+        </figure>
+        <div class="chart-scroll-region" role="region" tabindex="0" aria-label="{{ title }} results table">
+        <table class="chart-data-table"><caption>{{ title }} exact search measurements</caption>
+          <thead><tr><th scope="col">Attempts</th><th scope="col">Elapsed time (ns)</th><th scope="col">Result</th></tr></thead>
+          <tbody><tr><td>{{ panel.attempts }}</td><td>{{ panel.elapsed_ns }}</td><td>{{ 'match found' if panel.found else 'no match found' }}</td></tr></tbody>
+        </table>
+        </div>
         {% if key == 'collision' %}
           {% if panel.found %}<p>First candidate: <code>{{ panel.first_candidate_hex }}</code></p><p>Second candidate: <code>{{ panel.second_candidate_hex }}</code></p><p>Shared full digest: <code>{{ panel.digest_hex }}</code></p>{% endif %}
         {% elif panel.found %}<p>Matching candidate: <code>{{ panel.candidate_hex }}</code></p>{% endif %}
@@ -83,16 +177,52 @@
     <p>The block uses the first 16 UTF-8 input bytes, zero-padded when shorter and truncated when longer. This private one-block ECB transform is only a primitive measurement; ECB is unsuitable for protecting stored messages.</p>
     <p><strong>Selected block:</strong> <code>{{ result.block_hex }}</code> · <strong>Independent random keys:</strong> {{ result.keys_tested }}</p>
     <p><strong>Encryptions:</strong> {{ result.total_encryptions }} total, including {{ result.baseline_encryptions }} baselines · {{ result.plaintext_comparisons }} plaintext flips · {{ result.key_comparisons }} key flips.</p>
+    <p class="hex-change"><strong>Hex-character change for the same one-bit input flip under one fixed AES key:</strong> {{ result.hex_character_change.changed }} of {{ result.hex_character_change.total }} hexadecimal characters ({{ "%.1f"|format(result.hex_character_change.percent) }}%). The AES output is a 32-character hexadecimal block; this metric counts changed characters, not changed bits.</p>
     {% for key, title in [('plaintext_avalanche', 'Plaintext changes · illustration of diffusion'), ('key_avalanche', 'Key changes · illustration of key sensitivity associated with confusion')] %}
       {% set stats = result[key] %}
       <article class="search-result"><h3>{{ title }}</h3>
+        <p class="chart-axis">Changed output bits (%) · bar length is the measured mean percentage; the vertical line marks the 50% reference.</p>
+        <figure class="horizontal-chart avalanche-chart" aria-label="{{ title }} changed output bits percentage with 50 percent reference">
+          <figcaption>Changed output bits (%) · 50% reference</figcaption>
+          <ol class="horizontal-bars"><li class="horizontal-bar-row">
+            <span class="bar-label">Mean change</span>
+            <span class="bar-track reference-track" aria-hidden="true"><span class="bar-fill" style="width: {{ stats.mean_changed_percent }}%"></span><span class="reference-mark"></span></span>
+            <span class="bar-value">{{ stats.mean_changed_percent }}%</span>
+          </li></ol>
+        </figure>
         <dl class="analysis-stats"><dt>Mean changed bits</dt><dd>{{ stats.mean_changed_bits }}</dd><dt>Changed-bit range</dt><dd>{{ stats.min_changed_bits }}–{{ stats.max_changed_bits }}</dd><dt>Mean changed percent</dt><dd>{{ stats.mean_changed_percent }}%</dd><dt>Changed-percent range</dt><dd>{{ stats.min_changed_percent }}%–{{ stats.max_changed_percent }}%</dd></dl>
+        <section class="distribution-panel" aria-labelledby="{{ key }}-distribution-title">
+          <h4 id="{{ key }}-distribution-title">{% if key == 'plaintext_avalanche' %}Plaintext bit-change distribution{% else %}Key bit-change distribution{% endif %}</h4>
+          <p>Ten bins show comparison counts by percentage of output bits changed. The 50% reference boundary separates values below one-half from values at or above one-half.</p>
+          {% set distribution_max = namespace(value=1) %}
+          {% for bin in stats.distribution_10pct %}{% if bin.count > distribution_max.value %}{% set distribution_max.value = bin.count %}{% endif %}{% endfor %}
+          <figure class="distribution-chart" aria-label="{{ title }} distribution across ten percentage bins">
+            <figcaption>Output-bit changes · bin count out of {{ 4096 if key == 'plaintext_avalanche' else 8192 }} comparisons</figcaption>
+            <ol class="distribution-bars">
+              {% for bin in stats.distribution_10pct %}
+                {% if bin.lower_percent == 50 %}<li class="distribution-boundary" role="note">50% reference boundary</li>{% endif %}
+                <li class="distribution-bin">
+                  <span class="distribution-label">{{ bin.lower_percent }}–{{ bin.upper_percent }}%</span>
+                  <span class="bar-track" aria-hidden="true"><span class="bar-fill" style="width: {{ (100 * bin.count / distribution_max.value if distribution_max.value else 0)|round(2) }}%"></span></span>
+                  <span class="bar-value">{{ bin.count }} comparisons</span>
+                </li>
+              {% endfor %}
+            </ol>
+          </figure>
+        </section>
       </article>
     {% endfor %}
+    <h3>16 × 16 SAC summary</h3>
+    <p>Each summary cell averages the corresponding 8 by 8 region of the full matrix. Colors close to 50% mark values near the reference; every cell retains its numeric percentage.</p>
+    <div class="table-wrap sac-summary-table"><table aria-label="16 by 16 strict-avalanche criterion summary"><caption>16 × 16 SAC summary · average output-bit flip percentage</caption>
+      <thead><tr><th scope="col">Input byte / output byte</th>{% for column in range(1, 17) %}<th scope="col">{{ column }}</th>{% endfor %}</tr></thead>
+      <tbody>{% for row in result.sac.summary_16x16 %}{% set input_byte = loop.index %}<tr><th scope="row">{{ input_byte }}</th>{% for value in row %}<td class="{% if value >= 45 and value <= 55 %}sac-near-reference{% elif value >= 35 and value <= 65 %}sac-mid-range{% else %}sac-far-reference{% endif %}" aria-label="Input byte {{ input_byte }}, output byte {{ loop.index }}, {{ value }} percent">{{ "%.1f"|format(value) }}%</td>{% endfor %}</tr>{% endfor %}</tbody>
+    </table></div>
     <h3>Strict-avalanche criterion observations</h3>
     <p>Strict avalanche asks each output bit to change with probability one-half for every individual input-bit change. Each matrix cell is the observed output-bit flip percentage across 32 random keys for one selected input-bit flip. Mean absolute deviation from 50%: {{ result.sac.mean_abs_deviation_percentage_points }} percentage points. Cell range: {{ result.sac.min_flip_percent }}%–{{ result.sac.max_flip_percent }}%.</p>
-    <details><summary>Show the complete 128 by 128 flip-percentage matrix</summary><div class="table-wrap sac-table"><table><tbody>
-      {% for row in result.sac.flip_percentages %}<tr>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>{% endfor %}
+    <details><summary>Show the complete 128 by 128 flip-percentage matrix</summary><div class="table-wrap sac-table"><table><caption>Full 128 by 128 matrix · output-bit flip percentage by input-bit change</caption>
+      <thead><tr><th scope="col">Input bit / output bit</th>{% for column in range(1, 129) %}<th scope="col">{{ column }}</th>{% endfor %}</tr></thead>
+      <tbody>{% for row in result.sac.flip_percentages %}<tr><th scope="row">{{ loop.index }}</th>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>{% endfor %}
     </tbody></table></div></details>
     <p class="metadata-note">These finite observations illustrate diffusion and key sensitivity. They do not prove confusion, establish the strict avalanche criterion, or provide a security verdict.</p>
   </section>

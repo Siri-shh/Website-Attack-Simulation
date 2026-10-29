@@ -54,6 +54,7 @@ docker-compose.override.yml
 /dist/
 /test-results/
 /playwright-report/
+/.playwright-cli/
 
 # Python and local tooling.
 .venv/

@@ -6,7 +6,7 @@ from flask import Flask, Response, abort, make_response, redirect, render_templa
 
 from .auth import check_csrf, configure_auth, csrf_token, require_login
 from .config import Config, format_ist, format_utc, normalize_ip
-from .crypto import IntegrityError, open_record_image
+from .crypto import IntegrityError, open_record_image, open_record_measured
 from .identity import KeyRing
 from .images import MAX_IMAGE_BYTES
 from .records import RecordDenied, RecordMissing, list_records, read_record, read_record_history, save_record
@@ -192,12 +192,16 @@ def create_storage_app(config: Config, keys: KeyRing) -> Flask:
                 src_ip=_source_ip(),
                 session_ref=session["session_ref"],
             )
+            record, _ = history[0]
+            plaintext, _image, read_timings = open_record_measured(keys, record)
         except (RecordDenied, RecordMissing, IntegrityError) as error:
             return _record_error(error, record_id=record_id)
-        record, plaintext = history[0]
         return render_template(
             "storage/detail.html",
-            **_template_context(record=record, plaintext=plaintext, verified=True, history=history),
+            **_template_context(
+                record=record, plaintext=plaintext, verified=True, history=history,
+                read_timings=read_timings,
+            ),
         )
 
     @app.get("/records/<record_id>/versions/<int:version>/image")

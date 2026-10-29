@@ -41,7 +41,10 @@ def _protected_row(config, kind):
                 ("bob", "user", "unused-test-hash", 1),
             )
             conn.execute(
-                "INSERT INTO records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO records (id,owner,version,nonce_b64,ciphertext_b64,sha256_hex,"
+                "signature_b64,created_at_us,updated_at_us,generated_at_us,plaintext_bytes,"
+                "ciphertext_bytes,envelope_bytes,encryption_ns,hashing_ns,signing_ns) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 ("record-1", "bob", 1, "bm9uY2U=", "Y2lwaGVydGV4dA==",
                  "0" * 64, "c2lnbmF0dXJl", 1, 1, 1, 1, 16, 32, 1, 1, 1),
             )

@@ -5,14 +5,14 @@ Spec: `docs/superpowers/specs/2026-10-09-storage-security-design.md`
 Status: **COMPLETE THROUGH T25**
 Extension plan: `docs/superpowers/plans/2026-10-29-image-lockout-graphs-plan.md`
 Extension spec: `docs/superpowers/specs/2026-10-28-image-lockout-graphs-design.md`
-Extension status: **IN_PROGRESS**. The user explicitly approved the written plan with "okay now implement the plan" on 29 October 2026. T27-T34 are authorized; T01-T25 remain complete; safe tamper remains deferred.
+Extension status: **COMPLETE THROUGH T34**. The user explicitly approved the written plan with "okay now implement the plan" on 29 October 2026. T27-T34 are complete; T01-T25 remain complete; safe tamper remains deferred.
 Execution approval: user's “continue” on 9 October 2026 authorizes the written plan and selected Luna/Sol delegation.
-Current milestone: T25 IST timestamp display complete; tag `checkpoint/t25-ist-display`.
-Next action: commit/tag the reviewed M11 image milestone locally, then begin T32 bounded size-sweep measurement tests. T31 red 3 expected failures/23 passes, D55 review red 3/25, final focused 28 passes; M11 combined suite 158 passed in 50.81s, JS syntax and diff checks exit 0, independent Sol re-review PASS. T29/T30 are complete. M10 commit `5bcbe9e` tagged `checkpoint/m10-r2-response`. Preserve unrelated untracked startup report.
+Current milestone: M12 crypto graphs verified; local commit/tag `checkpoint/m12-crypto-graphs` is the final controller step.
+Next action: stage only explicit M12 files, commit, and create `checkpoint/m12-crypto-graphs`. Final suite 462 passed/1 skipped, Node 2 passed, compose config/build/up passed, rebuilt browser desktop/mobile verified, final Sol reviews PASS. Physical two-computer LAN test remains open. Preserve unrelated untracked startup report and ignored runtime data.
 Extension branch: `feature/image-lockout-graphs` (created from pushed `main`); no extra worktree because the user specified this `new_project` checkout.
 Current task base commit: `e5f5d52` for T22 (prior T21 details remain in its report).
 Active T22 spec: `docs/superpowers/specs/2026-10-10-crypto-analysis-safe-tamper-design.md`. Current task phase: M9 complete. T23 committed at 968c7f5; T24 integrated and verified. Final checkpoint commit/tag recorded below.
-Current branch: `feature/storage-security`.
+Historical base branch: `feature/storage-security`; active extension branch is `feature/image-lockout-graphs`.
 Initial design commit: `7b1e53c`.
 Planning checkpoint: Git tag `checkpoint/m0-plan` once this documentation is committed.
 
@@ -50,6 +50,9 @@ Historical M0/M1 preparation: planning checkpoint is committed and tagged. The v
 | T29 | M11 | gpt-6-sol high | COMPLETE | Red 27 expected failures / 50 passed; final focused 81 passed; Sol source and scoped test review PASS; base 5bcbe9e; report T29.md |
 | T30 | M11 | gpt-6-sol high | COMPLETE | Base 5bcbe9ef317120ba9f55b4f8fd5560d59caf1e60; initial red 29/19, D54 red 9/50; combined green 71 passed; Sol re-review PASS; report T30.md |
 | T31 | M11 | gpt-6-luna medium | COMPLETE | Base 5bcbe9ef317120ba9f55b4f8fd5560d59caf1e60; red 3/23, D55 red 3/25, final focused 28 passed, M11 combined 158 passed; Sol re-review PASS; report T31.md |
+| T32 | M12 | gpt-6-sol high | COMPLETE | Base d8c63dbe663e1d319d2f90b5c4c12e29f93d591a; red 23/54, green 78, Sol PASS; D59 extension red 2/35, green 37; report T32.md |
+| T33 | M12 | gpt-6-luna medium | COMPLETE | Base d8c63dbe663e1d319d2f90b5c4c12e29f93d591a; D62 final focused 90 pass; D65 mobile red 1/green 1; browser 390px fit; scoped Sol PASS; report T33.md |
+| T34 | M12 | gpt-6-luna medium / gpt-6-sol high | COMPLETE | Docs, D63 seed/schema, D64 smoke parser, D66 restart audit; final full 462 pass/1 skip, Node2, Docker/HTTPS/browser PASS, final Sol PASS; report T34.md |
 
 ## Update protocol
 
@@ -77,7 +80,8 @@ At each milestone, stage the changed code/tests and all updated durable document
 | M9 | checkpoint/m9-analysis | Complete; analysis-only admin feature; 344 passed, 1 skipped; Sol PASS |
 | T25 | checkpoint/t25-ist-display | Complete; IST display-only timezone conversion; 345 passed, 1 skipped; Sol PASS |
 | M10 | checkpoint/m10-r2-response | Complete, commit 5bcbe9e tagged; 355 passed/1 skipped, Node 2 passed, Sol PASS |
-| M11 | checkpoint/m11-image-records | Verified, local checkpoint pending commit/tag; combined 158 passed, Sol PASS |
+| M11 | checkpoint/m11-image-records | Complete; commit d8c63db tagged; combined 158 passed, Sol PASS |
+| M12 | checkpoint/m12-crypto-graphs | Verified; 462 passed/1 skipped, Node 2 passed, compose build/config/up and HTTPS/browser PASS, independent Sol PASS; local commit/tag is final bookkeeping |
 
 ## Open limitations
 

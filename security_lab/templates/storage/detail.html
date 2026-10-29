@@ -28,6 +28,86 @@
     </section>
   {% endif %}
 {% endmacro %}
+{% macro saved_measurement_chart(chart_id, title, timing_key, size_key, size_label, versions, image_only=false, throughput_multiplier=1, throughput_extra_bytes=0) %}
+  {% set maximum = namespace(value=0) %}
+  {% set has_rows = namespace(value=false) %}
+  {% for row, version_plaintext in versions %}
+    {% if not image_only or row.image_mime %}
+      {% set has_rows.value = true %}
+      {% if row[timing_key] > maximum.value %}{% set maximum.value = row[timing_key] %}{% endif %}
+    {% endif %}
+  {% endfor %}
+  {% if has_rows.value %}
+    <section class="saved-measurement" aria-labelledby="{{ chart_id }}-title">
+      <h3 id="{{ chart_id }}-title">{{ title }}</h3>
+      <p class="chart-axis">Input size labels each row; horizontal bar length encodes duration in ns, scaled to the longest duration in this group.</p>
+      <figure class="horizontal-chart" aria-label="{{ title }} duration by saved version">
+        <ol class="horizontal-bars">
+          {% for row, version_plaintext in versions %}
+            {% if not image_only or row.image_mime %}
+              {% set duration = row[timing_key] %}
+              {% set input_size = row[size_key] %}
+              <li class="horizontal-bar-row">
+                <span class="bar-label">Version {{ row.version }} · {{ input_size }} {{ size_label }}</span>
+                <span class="bar-track" aria-hidden="true"><span class="bar-fill" style="width: {{ (100 * duration / maximum.value if maximum.value else 0)|round(2) }}%"></span></span>
+                <span class="bar-value">{{ duration }} ns ({{ "%.6f"|format(duration / 1000000) }} ms)</span>
+              </li>
+            {% endif %}
+          {% endfor %}
+        </ol>
+      </figure>
+      <table class="chart-data-table">
+        <caption>{{ title }} · Durations in ns are exact; ms values are rounded to six decimal places.</caption>
+        <thead><tr><th scope="col">Version</th><th scope="col">{{ size_label }}</th><th scope="col">Duration (ns)</th><th scope="col">Duration (ms)</th></tr></thead>
+        <tbody>
+          {% for row, version_plaintext in versions %}
+            {% if not image_only or row.image_mime %}
+              <tr><th scope="row">Version {{ row.version }}</th><td>{{ row[size_key] }}</td><td>{{ row[timing_key] }}</td><td>{{ "%.6f"|format(row[timing_key] / 1000000) }}</td></tr>
+            {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+      <h4>{{ title }} throughput</h4>
+      <p class="chart-axis">Input size labels each row; horizontal bar length encodes MiB/s relative to the highest throughput in this group. Throughput values are rounded to six decimal places.{% if chart_id == 'image-hash' %} The throughput calculation counts both the plaintext and GCM ciphertext, including its 16-byte tag: 2 × image bytes + 16 bytes hashed.{% endif %}</p>
+      {% set max_throughput = namespace(value=0.0) %}
+      {% for row, version_plaintext in versions %}
+        {% if not image_only or row.image_mime %}
+          {% set processed_bytes = row[size_key] * throughput_multiplier + throughput_extra_bytes %}
+          {% set throughput = (processed_bytes * 1000000000 / (row[timing_key] * 1048576)) if row[timing_key] else 0 %}
+          {% if throughput > max_throughput.value %}{% set max_throughput.value = throughput %}{% endif %}
+        {% endif %}
+      {% endfor %}
+      <figure class="horizontal-chart" aria-label="{{ title }} throughput by saved version">
+        <ol class="horizontal-bars">
+          {% for row, version_plaintext in versions %}
+            {% if not image_only or row.image_mime %}
+              {% set processed_bytes = row[size_key] * throughput_multiplier + throughput_extra_bytes %}
+              {% set throughput = (processed_bytes * 1000000000 / (row[timing_key] * 1048576)) if row[timing_key] else 0 %}
+              <li class="horizontal-bar-row">
+                <span class="bar-label">Version {{ row.version }} · {{ processed_bytes }} bytes processed</span>
+                <span class="bar-track" aria-hidden="true"><span class="bar-fill bar-fill-secondary" style="width: {{ (100 * throughput / max_throughput.value if max_throughput.value else 0)|round(2) }}%"></span></span>
+                <span class="bar-value">{{ "%.6f"|format(throughput) }} MiB/s</span>
+              </li>
+            {% endif %}
+          {% endfor %}
+        </ol>
+      </figure>
+      <table class="chart-data-table">
+        <caption>{{ title }} throughput · reported to six decimal places</caption>
+        <thead><tr><th scope="col">Version</th><th scope="col">Bytes processed</th><th scope="col">Throughput (MiB/s)</th></tr></thead>
+        <tbody>
+          {% for row, version_plaintext in versions %}
+            {% if not image_only or row.image_mime %}
+              {% set processed_bytes = row[size_key] * throughput_multiplier + throughput_extra_bytes %}
+              {% set throughput = (processed_bytes * 1000000000 / (row[timing_key] * 1048576)) if row[timing_key] else 0 %}
+              <tr><th scope="row">Version {{ row.version }}</th><td>{{ processed_bytes }}</td><td>{{ "%.6f"|format(throughput) }}</td></tr>
+            {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  {% endif %}
+{% endmacro %}
 {% block content %}
   <div class="detail-topline">
     <a class="back-link" href="{{ url_for('storage_list') }}">← All records</a>
@@ -59,23 +139,38 @@
 
   <section class="performance-panel" aria-labelledby="performance-title">
     <p class="eyebrow">Saved with version {{ record.version }}</p>
-    <h2 id="performance-title">Measured operation durations for this saved version</h2>
-    <p class="lede">Individual operation measurements on this machine. These values are not a general benchmark or proof of security.</p>
-    <dl class="input-sizes">
-      <div><dt>Plaintext input</dt><dd>{{ record.plaintext_bytes }} bytes</dd></div>
-      <div><dt>Ciphertext</dt><dd>{{ record.ciphertext_bytes }} bytes</dd></div>
-      <div><dt>Signed envelope</dt><dd>{{ record.envelope_bytes }} bytes</dd></div>
-    </dl>
-    {% set max_duration = [1, record.encryption_ns, record.hashing_ns, record.signing_ns] | max %}
-    <table class="timing-table">
-      <caption>Time spent in each generation operation</caption>
-      <thead><tr><th scope="col">Operation</th><th scope="col">Duration</th><th scope="col">Relative scale</th></tr></thead>
-      <tbody>
-        <tr><th scope="row">AES-256-GCM encryption</th><td>{{ "%.6f" | format(record.encryption_ns / 1000000) }} ms</td><td><div class="timing-track" role="img" aria-label="Encryption duration bar"><span class="timing-bar" style="width: {{ 100 * record.encryption_ns / max_duration }}%"></span></div></td></tr>
-        <tr><th scope="row">SHA-256 hashing</th><td>{{ "%.6f" | format(record.hashing_ns / 1000000) }} ms</td><td><div class="timing-track" role="img" aria-label="Hashing duration bar"><span class="timing-bar timing-bar-secondary" style="width: {{ 100 * record.hashing_ns / max_duration }}%"></span></div></td></tr>
-        <tr><th scope="row">Ed25519 signing</th><td>{{ "%.6f" | format(record.signing_ns / 1000000) }} ms</td><td><div class="timing-track" role="img" aria-label="Signing duration bar"><span class="timing-bar timing-bar-tertiary" style="width: {{ 100 * record.signing_ns / max_duration }}%"></span></div></td></tr>
-      </tbody>
+    <h2 id="performance-title">Saved version measurements</h2>
+    <p class="lede">Measured operation durations for this saved version. These individual machine measurements are not a general benchmark or proof of security.</p>
+    {% if history|length == 1 %}<p class="single-point-note">One saved version is one point, not a trend.</p>{% endif %}
+    <p class="chart-axis">Input sizes are actual saved byte counts. Text AES uses plaintext bytes; image AES and image hashing use image bytes; envelope hashing and signing use signed-envelope bytes.</p>
+    <h3>Saved measurements by version</h3>
+    <table class="chart-data-table">
+      <caption>Saved plaintext, ciphertext, envelope, and image sizes by version · bytes</caption>
+      <thead><tr><th scope="col">Version</th><th scope="col">Plaintext</th><th scope="col">Ciphertext</th><th scope="col">Signed envelope</th><th scope="col">Image</th></tr></thead>
+      <tbody>{% for row, version_plaintext in history %}
+        <tr><th scope="row">Version {{ row.version }}</th><td>{{ row.plaintext_bytes }}</td><td>{{ row.ciphertext_bytes }}</td><td>{{ row.envelope_bytes }}</td><td>{% if row.image_mime %}{{ row.image_size }}{% else %}No image{% endif %}</td></tr>
+      {% endfor %}</tbody>
     </table>
+    {{ saved_measurement_chart('text-aes', 'Text AES-GCM encryption', 'encryption_ns', 'plaintext_bytes', 'bytes', history) }}
+    {{ saved_measurement_chart('image-aes', 'Image AES-GCM encryption', 'image_encrypt_ns', 'image_size', 'bytes', history, true) }}
+    {{ saved_measurement_chart('image-hash', 'Image SHA-256 hashing', 'image_hash_ns', 'image_size', 'bytes', history, true, 2, 16) }}
+    {{ saved_measurement_chart('envelope-hash', 'Envelope SHA-256 hashing', 'hashing_ns', 'envelope_bytes', 'bytes', history) }}
+    {{ saved_measurement_chart('envelope-sign', 'Ed25519 signing', 'signing_ns', 'envelope_bytes', 'bytes', history) }}
+    <section class="transient-read-measurements" aria-labelledby="read-measurements-title">
+      <p class="eyebrow">Current detail request</p>
+      <h3 id="read-measurements-title">Current read measurements · transient</h3>
+      <p>Verification and decryption durations for this read request. These values are not saved to the record or included in its signed evidence.</p>
+      <table class="chart-data-table">
+        <caption>Current read verification and decryption durations</caption>
+        <thead><tr><th scope="col">Operation</th><th scope="col">Duration (ns)</th><th scope="col">Duration (ms)</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Hash verification</th><td>{{ read_timings.hash_verification_ns }}</td><td>{{ "%.6f"|format(read_timings.hash_verification_ns / 1000000) }}</td></tr>
+          <tr><th scope="row">Signature verification</th><td>{{ read_timings.signature_verification_ns }}</td><td>{{ "%.6f"|format(read_timings.signature_verification_ns / 1000000) }}</td></tr>
+          <tr><th scope="row">Text decryption</th><td>{{ read_timings.text_decryption_ns }}</td><td>{{ "%.6f"|format(read_timings.text_decryption_ns / 1000000) }}</td></tr>
+          <tr><th scope="row">Image decryption</th><td>{% if read_timings.image_decryption_ns is not none %}{{ read_timings.image_decryption_ns }}{% else %}Not applicable{% endif %}</td><td>{% if read_timings.image_decryption_ns is not none %}{{ "%.6f"|format(read_timings.image_decryption_ns / 1000000) }}{% else %}Not applicable{% endif %}</td></tr>
+        </tbody>
+      </table>
+    </section>
   </section>
 <section class="record-history" aria-labelledby="history-heading">
   <h2 id="history-heading">Version history</h2>

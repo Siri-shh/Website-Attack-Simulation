@@ -142,10 +142,10 @@ git tag checkpoint/m11-image-records
 
 **Interfaces:** Add `benchmark_size_sweep(*, sizes: tuple[int, ...] = (128, 1024, 10240, 102400, 1048576), samples: int = 100) -> dict` to isolated `analysis.py`. Return `sizes`, `samples_per_size`, and `points`; each point has `input_bytes` and nested `{median_ns,p95_ns,mib_per_s}` for `aes_encrypt`, `aes_decrypt`, `sha256`, `ed25519_sign`, `ed25519_verify`. Use ephemeral keys, synthetic buffers, unique AES nonces, fixed warm-up, and a bounded maximum workload (only the five approved sizes; 1..100 samples); reject invalid sizes/sample counts. Add an admin-only CSRF POST `/analysis/size-sweep` using no-store and no DB/audit/production keys. Extend `aes_primitive_analysis` result with `hex_character_change:{changed,total,percent}` using corresponding hex characters from two equal-length one-block AES outputs under one key and one controlled input change; preserve existing keys. Add `sac.summary_16x16`, each cell the mean of its corresponding 8x8 block in the existing 128x128 percentage matrix. Expose current read timing values in storage detail only, labelled separately from saved version timings.
 
-- [ ] **Step 1 — tests:** Deterministic clock/random seams prove median/p95/throughput units, 100 samples per size, no nonce reuse, correct encrypt/decrypt/sign/verify, max work rejection, complete isolation; assert character metric uses 32 hex characters and same-key bit change. Route test checks admin/CSRF/no-store and output. Storage test checks read timings are transient and saved row unchanged.
-- [ ] **Step 2 — red check (controller):** `python -m pytest tests/test_analysis.py tests/test_console_ui.py tests/test_storage_ui.py -q`; record expected new-test failures.
-- [ ] **Step 3 — implementation:** Time only named crypto operations with monotonic nanoseconds; keep sample preparation out of timed spans. Do not alter the existing 1,000-sample AES/10,000-trial SHA/32-key primitive contracts. Use the T29 measured-open path for current record read observations.
-- [ ] **Step 4 — green/review (controller):** Repeat focused tests; independent Sol review of measurement meaning, bounds, nonce uniqueness and isolation before UI task.
+- [x] **Step 1 — tests:** Deterministic clock/random seams prove median/p95/throughput units, 100 samples per size, no nonce reuse, correct encrypt/decrypt/sign/verify, max work rejection, complete isolation; assert character metric uses 32 hex characters and same-key bit change. Route test checks admin/CSRF/no-store and output. Storage test checks read timings are transient and saved row unchanged.
+- [x] **Step 2 — red check (controller):** `python -m pytest tests/test_analysis.py tests/test_console_ui.py tests/test_storage_ui.py -q`; record expected new-test failures.
+- [x] **Step 3 — implementation:** Time only named crypto operations with monotonic nanoseconds; keep sample preparation out of timed spans. Do not alter the existing 1,000-sample AES/10,000-trial SHA/32-key primitive contracts. Use the T29 measured-open path for current record read observations.
+- [x] **Step 4 — green/review (controller):** Repeat focused tests; independent Sol review of measurement meaning, bounds, nonce uniqueness and isolation before UI task.
 
 ### Task T33: Accessible graphs on records and Analysis
 
@@ -155,10 +155,10 @@ git tag checkpoint/m11-image-records
 
 **Interfaces:** Use labelled HTML horizontal bar charts with adjacent numeric tables: each row labels its input size/version, and bar width is its duration divided by the largest duration in that chart; show the exact duration beside it. A separate bar group shows throughput in MiB/s. This requires no chart-coordinate algorithm. Size labels are bytes; time labels are ns or ms with explicit conversion. Record version series use text plaintext bytes for text AES, image size for image AES, envelope bytes for SHA/sign; current read measures are separately marked. Admin sweep plots five sizes and all five operations; SHA search plots attempts and elapsed time with no-match wording; AES primitive plots changed-bit percentages with a visible 50% reference, hex-character count/percentage, and T32's 16x16 SAC summary as color-coded cells while retaining the full matrix and ECB warning. A single point must not be described as a trend.
 
-- [ ] **Step 1 — tests:** Assert graph headings/axes/units, true saved version values, one-point label, all five admin size points/operations, SHA no-match caveat, AES 50% reference, character metric definition, and no input stored in markup outside the current response.
-- [ ] **Step 2 — red check (controller):** `python -m pytest tests/test_storage_ui.py tests/test_console_ui.py -q`; record new-test failures.
-- [ ] **Step 3 — implementation:** Add accessible charts and tables using numeric results only; sanitize template output and preserve responsive layout and existing evidence panels. No external chart library.
-- [ ] **Step 4 — green check (controller):** Repeat focused tests; inspect rendered HTML and browser pages at desktop/mobile sizes. Sol reviews final graph claims and UI evidence.
+- [x] **Step 1 — tests:** Assert graph headings/axes/units, true saved version values, one-point label, all five admin size points/operations, SHA no-match caveat, AES 50% reference, character metric definition, and no input stored in markup outside the current response.
+- [x] **Step 2 — red check (controller):** `python -m pytest tests/test_storage_ui.py tests/test_console_ui.py -q`; record new-test failures.
+- [x] **Step 3 — implementation:** Add accessible charts and tables using numeric results only; sanitize template output and preserve responsive layout and existing evidence panels. No external chart library.
+- [x] **Step 4 — green check (controller):** Repeat focused tests; inspect rendered HTML and browser pages at desktop/mobile sizes. Sol reviews final graph claims and UI evidence.
 
 ### Task T34: Demonstration guide and integration verification
 
@@ -168,9 +168,9 @@ git tag checkpoint/m11-image-records
 
 **Interfaces:** Explain one-image record create/edit/keep/replace/remove, owner preview and ciphertext, real timing versus synthetic size sweep, R2 fifth-failure/90-second wait/30-second R3 remainder, manual IP block distinction, AES/SHA/Ed25519 evidence, and where code lives. No unsafe/tamper demo additions.
 
-- [ ] **Step 1 — documentation:** Write concise professor walkthrough and code map; update ledger only with verified task outcomes supplied by controller.
-- [ ] **Step 2 — controller integration checks:** `python -m pytest -q`, `node --test tests/console_polling.test.cjs`, `docker compose config --quiet`, `docker compose build server`, `docker compose up -d`; verify both HTTPS sites, owner image flow, R2 countdown/console expiry, graphs, and no unexpected data mutation. Record exact outcomes; do not infer a LAN test from local Docker.
-- [ ] **Step 3 — final review:** Independent Sol reviews whole extension against spec and tests. Fix findings in their owning tasks, rerun affected checks, then mark T27–T34 COMPLETE and the plan/progress synchronized.
+- [x] **Step 1 — documentation:** Write concise professor walkthrough and code map; update ledger only with verified task outcomes supplied by controller.
+- [x] **Step 2 — controller integration checks:** `python -m pytest -q`, `node --test tests/console_polling.test.cjs`, `docker compose config --quiet`, `docker compose build server`, `docker compose up -d`; verify both HTTPS sites, owner image flow, R2 countdown/console expiry, graphs, and no unexpected data mutation. Record exact outcomes; do not infer a LAN test from local Docker.
+- [x] **Step 3 — final review:** Independent Sol reviews whole extension against spec and tests. Fix findings in their owning tasks, rerun affected checks, then mark T27–T34 COMPLETE and the plan/progress synchronized.
 
 **M12 checkpoint commands (controller only, after full checks/review pass):**
 

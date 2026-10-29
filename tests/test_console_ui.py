@@ -211,16 +211,24 @@ def _analysis_result(name):
             "preimage": panel, "second_preimage": panel,
             "collision": {**panel, "first_candidate_hex": None, "second_candidate_hex": None, "digest_hex": None},
         }
-    avalanche = {
-        "mean_changed_bits": 64.0, "min_changed_bits": 50, "max_changed_bits": 78,
-        "mean_changed_percent": 50.0, "min_changed_percent": 39.0, "max_changed_percent": 61.0,
-    }
+    def avalanche(comparisons):
+        counts = [1, 2, 3, 4, 5, 6, 7, 8, 9, comparisons - 45]
+        return {
+            "mean_changed_bits": 64.0, "min_changed_bits": 50, "max_changed_bits": 78,
+            "mean_changed_percent": 50.0, "min_changed_percent": 39.0, "max_changed_percent": 61.0,
+            "distribution_10pct": [
+                {"lower_percent": lower, "upper_percent": lower + 10, "count": count}
+                for lower, count in zip(range(0, 100, 10), counts)
+            ],
+        }
     return {
         "input_bytes": 4, "block_hex": "00" * 16, "keys_tested": 32,
         "baseline_encryptions": 32, "plaintext_comparisons": 4096,
         "key_comparisons": 8192, "total_encryptions": 12320,
-        "plaintext_avalanche": avalanche, "key_avalanche": avalanche,
+        "plaintext_avalanche": avalanche(4096), "key_avalanche": avalanche(8192),
+        "hex_character_change": {"changed": 16, "total": 32, "percent": 50.0},
         "sac": {"flip_percentages": [[50.0] * 128 for _ in range(128)],
+                "summary_16x16": [[50.0] * 16 for _ in range(16)],
                 "mean_abs_deviation_percentage_points": 0.0,
                 "min_flip_percent": 50.0, "max_flip_percent": 50.0},
     }
@@ -246,6 +254,21 @@ def test_analysis_page_requires_admin_and_is_not_cached(real_console_client):
     assert b"name=\"input_text\"" in response.data
     assert b"aes-gcm" in response.data and b"sha256" in response.data and b"aes-primitive" in response.data
     assert b"console.js" not in response.data
+
+
+def test_size_sweep_has_its_own_csrf_protected_post_form(real_console_client):
+    assert _login(real_console_client).status_code == 303
+    response = real_console_client.get("/analysis", base_url="https://localhost")
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    form = re.search(
+        r'<form(?=[^>]*method="post")(?=[^>]*action="/analysis/size-sweep")[^>]*>(.*?)</form>',
+        html, re.I | re.S,
+    )
+    assert form
+    assert 'name="csrf_token"' in form.group(1)
+    assert re.search(r'<button[^>]*>[^<]*size sweep[^<]*</button>', form.group(1), re.I)
 
 
 def test_dashboard_links_to_analysis(real_console_client):
@@ -353,3 +376,261 @@ def test_analysis_posts_do_not_add_database_events(real_console_client, config, 
     with transaction(config) as conn:
         after = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
     assert after == before
+
+
+def test_size_sweep_post_requires_admin_csrf_and_passes_isolated_result(real_console_client, monkeypatch):
+    from security_lab import console
+
+    path = "/analysis/size-sweep"
+    anonymous = real_console_client.post(path, base_url="https://localhost")
+    assert anonymous.status_code in (302, 303)
+    assert anonymous.headers["Cache-Control"] == "no-store"
+
+    with real_console_client.session_transaction() as state:
+        state["username"] = "bob"
+        state["role"] = "user"
+        state["session_ref"] = "test-session"
+    user = real_console_client.post(path, base_url="https://localhost")
+    assert user.status_code in (302, 303)
+    assert user.headers["Cache-Control"] == "no-store"
+
+    assert _login(real_console_client).status_code == 303
+    missing_csrf = real_console_client.post(path, base_url="https://localhost")
+    assert missing_csrf.status_code == 400
+    assert missing_csrf.headers["Cache-Control"] == "no-store"
+
+    marker = {
+        "sizes": [128], "samples_per_size": 1,
+        "points": [{"input_bytes": 128, **{
+            operation: {"median_ns": 2_000, "p95_ns": 2_000, "mib_per_s": 61.03515625}
+            for operation in ("aes_encrypt", "aes_decrypt", "sha256", "ed25519_sign", "ed25519_verify")
+        }}],
+    }
+    calls = []
+    monkeypatch.setattr(console, "benchmark_size_sweep", lambda *args, **kwargs: (
+        calls.append((args, kwargs)) or marker
+    ))
+    original_render = console.render_template
+    rendered = []
+
+    def capture_render(template, **context):
+        if template == "console/analysis.html":
+            rendered.append(context)
+        return original_render(template, **context)
+
+    monkeypatch.setattr(console, "render_template", capture_render)
+    monkeypatch.setattr(console, "connect", lambda *args, **kwargs: pytest.fail("analysis opened database"))
+    monkeypatch.setattr(console, "transaction", lambda *args, **kwargs: pytest.fail("analysis wrote database"))
+    token = _csrf(real_console_client, "/analysis")
+    response = real_console_client.post(path, data={"csrf_token": token}, base_url="https://localhost")
+
+    assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "no-store"
+    assert calls == [((), {})]
+    assert rendered[-1]["result_type"] == "size-sweep"
+    assert rendered[-1]["result"] is marker
+    assert rendered[-1]["analysis_error"] is None
+
+
+def test_size_sweep_renders_all_numeric_sizes_operations_and_units(real_console_client, monkeypatch):
+    from security_lab import console
+
+    sizes = [128, 1024, 10240, 102400, 1048576]
+    operations = ("aes_encrypt", "aes_decrypt", "sha256", "ed25519_sign", "ed25519_verify")
+    points = []
+    for index, size in enumerate(sizes, start=1):
+        points.append({"input_bytes": size, **{
+            operation: {
+                "median_ns": index * 1000,
+                "p95_ns": index * 1500,
+                "mib_per_s": round(size * 1_000_000_000 / (index * 1000 * 1_048_576), 6),
+            }
+            for operation in operations
+        }})
+    marker = {"sizes": sizes, "samples_per_size": 100, "points": points}
+    monkeypatch.setattr(console, "benchmark_size_sweep", lambda: marker)
+    assert _login(real_console_client).status_code == 303
+    token = _csrf(real_console_client, "/analysis")
+    response = real_console_client.post(
+        "/analysis/size-sweep", data={"csrf_token": token}, base_url="https://localhost"
+    )
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Size sweep measurements" in html
+    assert "Input size (bytes)" in html
+    assert "Input size is the row category" in html
+    assert "horizontal bar length encodes median duration" in html
+    assert "Median duration (ns)" in html and "p95 duration (ns)" in html
+    assert "Throughput (MiB/s)" in html
+    assert "throughput values are rounded to six decimal places" in html
+    for size, point in zip(sizes, points):
+        assert str(size) in html
+        for operation in operations:
+            result = point[operation]
+            assert operation.replace("_", " ").lower() in html.lower()
+            assert str(result["median_ns"]) in html
+            assert str(result["p95_ns"]) in html
+            assert str(result["mib_per_s"]) in html
+    assert "100 samples per size" in html.lower()
+
+
+def test_sha_search_graph_shows_numeric_attempts_elapsed_and_no_match_caveat(real_console_client, monkeypatch):
+    from security_lab import console
+
+    monkeypatch.setattr(console, "sha256_analysis", lambda data: _analysis_result("sha256"))
+    assert _login(real_console_client).status_code == 303
+    token = _csrf(real_console_client, "/analysis")
+    response = real_console_client.post(
+        "/analysis/sha256", data={"csrf_token": token, "input_text": "temporary search input"},
+        base_url="https://localhost",
+    )
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Bounded SHA-256 search measurements" in html
+    assert "Attempts" in html and "Elapsed time (ns)" in html
+    assert "2" in html and "7" in html
+    assert "no match found" in html.lower()
+    assert "not proof of resistance" in html.lower()
+
+
+def test_aes_primitive_graph_exposes_50_percent_reference_hex_metric_and_full_matrix(
+    real_console_client, monkeypatch,
+):
+    from security_lab import console
+
+    monkeypatch.setattr(console, "aes_primitive_analysis", lambda data: _analysis_result("aes_primitive"))
+    assert _login(real_console_client).status_code == 303
+    token = _csrf(real_console_client, "/analysis")
+    response = real_console_client.post(
+        "/analysis/aes-primitive", data={"csrf_token": token}, base_url="https://localhost"
+    )
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Changed output bits (%)" in html
+    assert "50% reference" in html
+    assert "Hex-character change for the same one-bit input flip" in html
+    assert "16 of 32 hexadecimal characters" in html
+    assert "50.0%" in html
+    assert "16 × 16 SAC summary" in html
+    assert "Show the complete 128 by 128 flip-percentage matrix" in html
+    assert "ECB is unsuitable for protecting stored messages" in html
+
+
+def test_aes_primitive_shows_two_ten_bin_distributions_with_counts_and_half_boundary(
+    real_console_client, monkeypatch,
+):
+    from security_lab import console
+
+    monkeypatch.setattr(console, "aes_primitive_analysis", lambda data: _analysis_result("aes_primitive"))
+    assert _login(real_console_client).status_code == 303
+    token = _csrf(real_console_client, "/analysis")
+    response = real_console_client.post(
+        "/analysis/aes-primitive", data={"csrf_token": token}, base_url="https://localhost"
+    )
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Plaintext bit-change distribution" in html
+    assert "Key bit-change distribution" in html
+    assert html.count('class="distribution-chart"') == 2
+    assert html.count('class="distribution-boundary"') == 2
+    assert "0–10%" in html and "90–100%" in html
+    assert "4096 comparisons" in html and "8192 comparisons" in html
+    for lower in range(0, 100, 10):
+        assert f"{lower}–{lower + 10}%" in html
+
+
+def test_temporary_analysis_input_is_not_persisted(real_console_client, config, monkeypatch):
+    from security_lab import console
+
+    marker = "private-transient-input-7f31"
+    monkeypatch.setattr(console, "sha256_analysis", lambda data: _analysis_result("sha256"))
+    assert _login(real_console_client).status_code == 303
+    with transaction(config) as conn:
+        before = {table: conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                  for table in ("records", "record_versions", "events")}
+    token = _csrf(real_console_client, "/analysis")
+    response = real_console_client.post(
+        "/analysis/sha256", data={"csrf_token": token, "input_text": marker},
+        base_url="https://localhost",
+    )
+
+    assert response.status_code == 200
+    assert marker in response.get_data(as_text=True)
+    with transaction(config) as conn:
+        after = {table: conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                 for table in ("records", "record_versions", "events")}
+        event_json = " ".join(row[0] for row in conn.execute("SELECT payload_json FROM events"))
+    assert after == before
+    assert marker not in event_json
+
+
+def test_console_analysis_chart_rules_have_dark_mode_contrast():
+    css = (_STATIC_ROOT / "console.css").read_text(encoding="utf-8")
+    dark_start = css.rfind("@media(prefers-color-scheme:dark)")
+    assert dark_start >= 0
+    dark_rules = css[dark_start:]
+    assert ".transient-note" in dark_rules and "background:" in dark_rules
+    assert re.search(
+        r"\.chart-data-table thead th\s*\{[^}]*color:\s*#e6edf5[^}]*background:",
+        dark_rules,
+    )
+    assert re.search(r"\.distribution-boundary\s*\{[^}]*color:\s*#842b2f", css)
+    assert not re.search(r"\.distribution-boundary\s*\{[^}]*color:\s*#ffb4ad", dark_rules)
+
+
+def test_analysis_numeric_tables_use_keyboard_scroll_regions_at_mobile_width(real_console_client, monkeypatch):
+    from security_lab import console
+
+    sizes = [128, 1024, 10240, 102400, 1048576]
+    operations = ("aes_encrypt", "aes_decrypt", "sha256", "ed25519_sign", "ed25519_verify")
+    sweep = {"sizes": sizes, "samples_per_size": 1, "points": [
+        {"input_bytes": size, **{
+            operation: {"median_ns": 1000, "p95_ns": 1200, "mib_per_s": 0.5}
+            for operation in operations
+        }}
+        for size in sizes
+    ]}
+    monkeypatch.setattr(console, "benchmark_size_sweep", lambda: sweep)
+    assert _login(real_console_client).status_code == 303
+    token = _csrf(real_console_client, "/analysis")
+    sweep_response = real_console_client.post(
+        "/analysis/size-sweep", data={"csrf_token": token}, base_url="https://localhost"
+    )
+    assert sweep_response.status_code == 200
+    sweep_html = sweep_response.get_data(as_text=True)
+
+    def assert_wrapped_tables(html, expected):
+        regions = re.findall(
+            r'<div(?=[^>]*class="chart-scroll-region")(?=[^>]*role="region")'
+            r'(?=[^>]*tabindex="0")(?=[^>]*aria-label="[^"]+")[^>]*>(.*?)</div>',
+            html, re.I | re.S,
+        )
+        tables = re.findall(
+            r'<table(?=[^>]*class="[^"]*chart-data-table[^"]*")[^>]*>', html, re.I,
+        )
+        assert len(regions) == expected
+        assert len(tables) == expected
+        assert all(re.search(r'<table(?=[^>]*class="[^"]*chart-data-table)', region, re.I) for region in regions)
+
+    assert_wrapped_tables(sweep_html, 5)
+    assert len(re.findall(r'<section class="sweep-operation"', sweep_html)) == 5
+
+    monkeypatch.setattr(console, "sha256_analysis", lambda data: _analysis_result("sha256"))
+    token = _csrf(real_console_client, "/analysis")
+    sha_response = real_console_client.post(
+        "/analysis/sha256", data={"csrf_token": token}, base_url="https://localhost"
+    )
+    assert sha_response.status_code == 200
+    assert_wrapped_tables(sha_response.get_data(as_text=True), 3)
+
+    css = (_STATIC_ROOT / "console.css").read_text(encoding="utf-8")
+    assert re.search(
+        r"\.chart-scroll-region\s*\{[^}]*max-width:\s*100%;[^}]*overflow-x:\s*auto\s*;?\s*\}",
+        css, re.S,
+    )
+    compact_css = re.sub(r"\s+", "", css)
+    assert ".chart-data-table{display:block;overflow-x:auto}" not in compact_css
