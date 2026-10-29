@@ -23,7 +23,16 @@ CREATE TABLE IF NOT EXISTS records (
     envelope_bytes INTEGER NOT NULL CHECK (envelope_bytes >= 0),
     encryption_ns INTEGER NOT NULL CHECK (encryption_ns >= 0),
     hashing_ns INTEGER NOT NULL CHECK (hashing_ns >= 0),
-    signing_ns INTEGER NOT NULL CHECK (signing_ns >= 0)
+    signing_ns INTEGER NOT NULL CHECK (signing_ns >= 0),
+    envelope_schema INTEGER NOT NULL DEFAULT 1,
+    image_nonce BLOB,
+    image_ciphertext BLOB,
+    image_mime TEXT,
+    image_size INTEGER,
+    image_plain_sha256 TEXT,
+    image_cipher_sha256 TEXT,
+    image_encrypt_ns INTEGER,
+    image_hash_ns INTEGER
 );
 CREATE INDEX IF NOT EXISTS records_owner_idx ON records(owner);
 
@@ -44,6 +53,15 @@ CREATE TABLE IF NOT EXISTS record_versions (
     encryption_ns INTEGER NOT NULL CHECK (encryption_ns >= 0),
     hashing_ns INTEGER NOT NULL CHECK (hashing_ns >= 0),
     signing_ns INTEGER NOT NULL CHECK (signing_ns >= 0),
+    envelope_schema INTEGER NOT NULL DEFAULT 1,
+    image_nonce BLOB,
+    image_ciphertext BLOB,
+    image_mime TEXT,
+    image_size INTEGER,
+    image_plain_sha256 TEXT,
+    image_cipher_sha256 TEXT,
+    image_encrypt_ns INTEGER,
+    image_hash_ns INTEGER,
     PRIMARY KEY (id, version)
 );
 

@@ -3,21 +3,37 @@
 {% block content %}
   <section class="form-panel">
     <a class="back-link" href="{% if record_id %}{{ url_for('record_detail', record_id=record_id) }}{% else %}{{ url_for('storage_list') }}{% endif %}">← Back</a>
-    <p class="eyebrow">Private text record</p>
+    <p class="eyebrow">Private record</p>
     <h1>{% if record_id %}Edit record{% else %}Create a record{% endif %}</h1>
-    <p class="lede">Your title and text are encrypted when you save.</p>
+    <p class="lede">Your title, text, and optional image are encrypted when you save.</p>
     {% if error %}<p class="error-message" role="alert">{{ error }}</p>{% endif %}
-    <form class="record-form" method="post" action="{% if record_id %}{{ url_for('edit_record', record_id=record_id) }}{% else %}{{ url_for('new_record') }}{% endif %}">
+    <form class="record-form" method="post" enctype="multipart/form-data" action="{% if record_id %}{{ url_for('edit_record', record_id=record_id) }}{% else %}{{ url_for('new_record') }}{% endif %}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <label for="title">Title</label>
       <input id="title" name="title" type="text" maxlength="120" required value="{{ form.title }}" autocomplete="off">
       <label for="body">Text</label>
       <textarea id="body" name="body" rows="12" maxlength="10000" required>{{ form.body }}</textarea>
       <p class="field-note">Maximum 120 characters for the title and 10,000 for the text.</p>
+      <label for="image">Image (optional)</label>
+      <input id="image" name="image" type="file" accept="image/png,image/jpeg" aria-describedby="image-note">
+      <p class="field-note" id="image-note">Choose one PNG or JPEG image up to 1 MiB.</p>
+      <p class="field-note"><strong>If JavaScript is disabled</strong>, after choosing a file select {% if record_id %}Replace the selected image{% else %}Add the selected image{% endif %} below.</p>
+      <fieldset class="image-actions">
+        <legend>Image action</legend>
+        {% if record_id %}
+          <label><input type="radio" name="image_action" value="keep" checked> Keep the current image</label>
+          <label><input type="radio" name="image_action" value="replace"> Replace it with the selected image</label>
+          <label><input type="radio" name="image_action" value="remove"> Remove the current image</label>
+        {% else %}
+          <label><input type="radio" name="image_action" value="keep" checked> Save without an image</label>
+          <label><input type="radio" name="image_action" value="replace"> Add the selected image</label>
+        {% endif %}
+      </fieldset>
       <div class="form-actions">
         <button class="button button-primary" type="submit">{% if record_id %}Save changes{% else %}Save record{% endif %}</button>
         <a class="button button-secondary" href="{% if record_id %}{{ url_for('record_detail', record_id=record_id) }}{% else %}{{ url_for('storage_list') }}{% endif %}">Cancel</a>
       </div>
     </form>
   </section>
+  <script src="{{ url_for('static', filename='record-evidence.js') }}" defer></script>
 {% endblock %}

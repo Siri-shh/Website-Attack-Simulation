@@ -1,19 +1,23 @@
 """Atomic, ownership-checked services for the latest encrypted records."""
 
+from typing import Literal
 from uuid import uuid4
 
 from .audit import append_app_event
 from .config import Config, utc_us
-from .crypto import IntegrityError, open_record, seal_record
+from .crypto import IntegrityError, open_record, open_record_image, seal_record
 from .db import transaction
 from .identity import KeyRing
+from .images import validate_image_upload
 
 
 _RECORD_FIELDS = (
     "id", "owner", "version", "nonce_b64", "ciphertext_b64", "sha256_hex",
     "signature_b64", "created_at_us", "updated_at_us", "generated_at_us",
     "plaintext_bytes", "ciphertext_bytes", "envelope_bytes", "encryption_ns",
-    "hashing_ns", "signing_ns",
+    "hashing_ns", "signing_ns", "envelope_schema", "image_nonce",
+    "image_ciphertext", "image_mime", "image_size", "image_plain_sha256",
+    "image_cipher_sha256", "image_encrypt_ns", "image_hash_ns",
 )
 
 
@@ -53,16 +57,16 @@ def _event(conn, config, keys, *, kind, owner, record_id, src_ip, session_ref, t
 
 def _checked_record(conn, config, keys, *, owner, record_id, src_ip, session_ref):
     """Return expected failures so their audit transaction can commit first."""
-    found = conn.execute("SELECT * FROM records WHERE id=?", (record_id,)).fetchone()
+    found = conn.execute("SELECT owner FROM records WHERE id=?", (record_id,)).fetchone()
     if found is None:
         return None, None, RecordMissing("Record not found")
-    row = dict(found)
-    if row["owner"] != owner:
+    if found["owner"] != owner:
         _event(
             conn, config, keys, kind="foreign_record_denied", owner=owner,
             record_id=record_id, src_ip=src_ip, session_ref=session_ref,
         )
         return None, None, RecordDenied("Record access denied")
+    row = dict(conn.execute("SELECT * FROM records WHERE id=?", (record_id,)).fetchone())
     try:
         plaintext = open_record(keys, row)
     except IntegrityError:
@@ -77,11 +81,19 @@ def _checked_record(conn, config, keys, *, owner, record_id, src_ip, session_ref
 def save_record(
     config: Config, keys: KeyRing, *, owner: str, record_id: str | None,
     title: str, body: str, src_ip: str, session_ref: str,
+    image_action: Literal["keep", "replace", "remove"] = "keep",
+    image_bytes: bytes | None = None, image_mime: str | None = None,
 ) -> dict:
     """Seal and audit the latest version together under an immediate lock."""
     for label, value, maximum in (("Title", title, 120), ("Body", body, 10_000)):
         if not isinstance(value, str) or not 1 <= len(value) <= maximum or not value.strip():
             raise ValueError(f"{label} must contain 1 to {maximum} characters and non-whitespace text")
+    if image_action not in ("keep", "replace", "remove"):
+        raise ValueError("Invalid image action")
+    if image_action == "replace":
+        image_bytes, image_mime = validate_image_upload(image_bytes, image_mime)
+    elif image_bytes is not None or image_mime is not None:
+        raise ValueError("Image data requires replace action")
 
     error = None
     with transaction(config) as conn:
@@ -92,6 +104,10 @@ def save_record(
                 src_ip=src_ip, session_ref=session_ref,
             )
         if error is None:
+            if previous is not None and image_action == "keep":
+                retained = open_record_image(keys, previous)
+                if retained is not None:
+                    image_mime, image_bytes = retained
             saved_at = utc_us()
             row = seal_record(
                 keys, record_id=uuid4().hex if record_id is None else record_id,
@@ -99,6 +115,7 @@ def save_record(
                 title=title, body=body,
                 created_at_us=saved_at if previous is None else previous["created_at_us"],
                 saved_at_us=saved_at,
+                image_bytes=image_bytes, image_mime=image_mime,
             )
             if previous is None:
                 conn.execute(
@@ -193,7 +210,9 @@ def read_record_history(config: Config, keys: KeyRing, *, owner: str, record_id:
             integrity_problem = not snapshots
             if snapshots:
                 integrity_problem = (
-                    any(row["id"] != record_id or row["owner"] != owner for row in snapshots)
+                    snapshots[-1]["version"] != 1
+                    or snapshots[0]["version"] != current["version"]
+                    or any(row["id"] != record_id or row["owner"] != owner for row in snapshots)
                     or any(
                         snapshots[index]["version"] != snapshots[index + 1]["version"] + 1
                         for index in range(len(snapshots) - 1)

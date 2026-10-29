@@ -1,5 +1,33 @@
 {% extends "storage/base.html" %}
 {% block title %}{{ plaintext.title }}{% endblock %}
+{% macro image_evidence(row, record_id) %}
+  {% if row.image_mime %}
+    <section class="image-evidence" aria-labelledby="image-evidence-{{ row.version }}">
+      <div class="image-evidence-copy">
+        <p class="eyebrow">Verified image · version {{ row.version }}</p>
+        <h2 id="image-evidence-{{ row.version }}">Image evidence</h2>
+        <p class="lede">This preview is decrypted and verified for your account when requested.</p>
+        <a href="{{ url_for('record_image', record_id=record_id, version=row.version) }}">Open verified image preview</a>
+        <dl class="image-metadata">
+          <div><dt>MIME type</dt><dd>{{ row.image_mime }}</dd></div>
+          <div><dt>Original image size</dt><dd>{{ row.image_size }} bytes</dd></div>
+          <div><dt>Image nonce · Base64</dt><dd><code>{{ row.image_nonce|b64 }}</code></dd></div>
+          <div><dt>Plaintext image SHA-256</dt><dd><code>{{ row.image_plain_sha256 }}</code></dd></div>
+          <div><dt>Ciphertext image SHA-256</dt><dd><code>{{ row.image_cipher_sha256 }}</code></dd></div>
+          <div><dt>Saved image encryption</dt><dd>{{ row.image_encrypt_ns }} ns ({{ "%.6f"|format(row.image_encrypt_ns / 1000000) }} ms)</dd></div>
+          <div><dt>Saved image hashing</dt><dd>{{ row.image_hash_ns }} ns ({{ "%.6f"|format(row.image_hash_ns / 1000000) }} ms)</dd></div>
+        </dl>
+      </div>
+      <img class="record-image-preview" src="{{ url_for('record_image', record_id=record_id, version=row.version) }}" alt="Verified image attached to version {{ row.version }}" loading="lazy">
+      <details class="image-ciphertext" data-ciphertext-url="{{ url_for('record_image_ciphertext', record_id=record_id, version=row.version) }}">
+        <summary>Show full encrypted image ciphertext</summary>
+        <p class="ciphertext-error" data-ciphertext-error role="alert" hidden></p>
+        <p class="ciphertext-status" data-ciphertext-status aria-live="polite">Expand to load the verified ciphertext.</p>
+        <pre class="evidence-value" data-ciphertext-output></pre>
+      </details>
+    </section>
+  {% endif %}
+{% endmacro %}
 {% block content %}
   <div class="detail-topline">
     <a class="back-link" href="{{ url_for('storage_list') }}">← All records</a>
@@ -15,6 +43,8 @@
       <div><dt>Evidence generated (IST)</dt><dd><time datetime="{{ record.generated_at_us | ist }}">{{ record.generated_at_us | ist }}</time></dd></div>
     </dl>
   </article>
+
+  {{ image_evidence(record, record.id) }}
 
   <section class="evidence-panel" aria-labelledby="evidence-title">
     <div class="section-heading"><div><p class="eyebrow">Verified for this account</p><h2 id="evidence-title">Cryptographic evidence</h2></div><span class="status-badge">{% if verified %}Verified{% else %}Unverified{% endif %}</span></div>
@@ -58,6 +88,7 @@
           <p><strong>Title:</strong> {{ version_plaintext.title }}</p>
           <p><strong>Text:</strong></p>
           <pre>{{ version_plaintext.body }}</pre>
+          {{ image_evidence(version, record.id) }}
           <p><strong>Ed25519 verification:</strong> Verified</p>
           <dl>
             <dt>Updated (IST)</dt><dd>{{ version.updated_at_us|ist }}</dd>
@@ -79,4 +110,5 @@
     <p>No older versions.</p>
   {% endif %}
 </section>
+<script src="{{ url_for('static', filename='record-evidence.js') }}" defer></script>
 {% endblock %}

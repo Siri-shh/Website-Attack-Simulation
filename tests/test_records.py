@@ -1,17 +1,19 @@
 """Record service contracts exercised against real SQLite and cryptography."""
 
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import closing
+from contextlib import closing, contextmanager
+from io import BytesIO
 import json
 from threading import Barrier
 from uuid import UUID
 
 import pytest
+from PIL import Image
 from werkzeug.security import generate_password_hash
 
 from security_lab import records
 from security_lab.audit import verify_app_event
-from security_lab.crypto import IntegrityError, open_record
+from security_lab.crypto import IntegrityError, open_record, open_record_image
 from security_lab.db import connect, transaction
 
 
@@ -26,12 +28,25 @@ def seeded(config, keys):
     return config, keys
 
 
-def save(seeded, *, owner="alice", record_id=None, title="Private title", body="Private body"):
+def save(seeded, *, owner="alice", record_id=None, title="Private title", body="Private body",
+         image_action="keep", image_bytes=None, image_mime=None):
     config, keys = seeded
+    image_options = {}
+    if image_action != "keep" or image_bytes is not None or image_mime is not None:
+        image_options = {
+            "image_action": image_action, "image_bytes": image_bytes, "image_mime": image_mime,
+        }
     return records.save_record(
         config, keys, owner=owner, record_id=record_id, title=title, body=body,
         src_ip="192.0.2.10", session_ref="test-session",
+        **image_options,
     )
+
+
+def tiny_image(image_format="PNG"):
+    buffer = BytesIO()
+    Image.new("RGB", (2, 2), (14, 28, 42)).save(buffer, format=image_format)
+    return buffer.getvalue()
 
 
 def stored_rows(config, table):
@@ -274,3 +289,189 @@ def test_failed_save_rolls_back_ciphertext_and_success_event_together(seeded, mo
         save(seeded, record_id=original["id"] if original else None, body="Changed body")
     assert stored_rows(config, "records") == before_records
     assert stored_rows(config, "events") == before_events
+
+
+def test_image_create_keep_replace_remove_preserves_exact_version_evidence(seeded):
+    config, keys = seeded
+    png = tiny_image("PNG")
+    jpeg = tiny_image("JPEG")
+    first = save(seeded, image_action="replace", image_bytes=png, image_mime="image/png")
+    kept = save(seeded, record_id=first["id"], body="Text edit keeps the image")
+    replaced = save(
+        seeded, record_id=first["id"], body="Image replacement", image_action="replace",
+        image_bytes=jpeg, image_mime="image/jpeg",
+    )
+    removed = save(seeded, record_id=first["id"], body="Image removed", image_action="remove")
+
+    assert [row["version"] for row in (first, kept, replaced, removed)] == [1, 2, 3, 4]
+    assert all(row["envelope_schema"] == 2 for row in (first, kept, replaced, removed))
+    assert open_record_image(keys, first) == ("image/png", png)
+    assert open_record_image(keys, kept) == ("image/png", png)
+    assert open_record_image(keys, replaced) == ("image/jpeg", jpeg)
+    assert open_record_image(keys, removed) is None
+    assert kept["image_nonce"] != first["image_nonce"]
+    assert kept["image_ciphertext"] != first["image_ciphertext"]
+    assert all(removed[field] is None for field in (
+        "image_nonce", "image_ciphertext", "image_mime", "image_size",
+        "image_plain_sha256", "image_cipher_sha256", "image_encrypt_ns", "image_hash_ns",
+    ))
+    assert stored_rows(config, "records") == [removed]
+    assert stored_rows(config, "record_versions") == [first, kept, replaced, removed]
+    history = records.read_record_history(
+        config, keys, owner="alice", record_id=first["id"],
+        src_ip="192.0.2.10", session_ref="test-session",
+    )
+    assert [open_record_image(keys, row) for row, _ in history] == [
+        None, ("image/jpeg", jpeg), ("image/png", png), ("image/png", png),
+    ]
+    events = stored_rows(config, "events")
+    assert [event["kind"] for event in events] == [
+        "record_created", "record_updated", "record_updated", "record_updated", "record_read",
+    ]
+    for event in events:
+        assert_signed_event(keys, event, kind=event["kind"], owner="alice", record_id=first["id"])
+
+
+@pytest.mark.parametrize("image_action,image_bytes,image_mime", [
+    ("replace", None, "image/png"),
+    ("replace", b"damaged PNG", "image/png"),
+    ("replace", tiny_image(), "image/jpeg"),
+    ("replace", b"x" * 1_048_577, "image/png"),
+    ("keep", tiny_image(), "image/png"),
+    ("remove", tiny_image(), "image/png"),
+    ("unknown", None, None),
+], ids=[
+    "replace-missing-bytes", "replace-malformed", "replace-mime-mismatch",
+    "replace-oversize", "keep-with-upload", "remove-with-upload", "unknown-action",
+])
+def test_invalid_image_command_rejects_before_save_or_success_audit(
+    seeded, image_action, image_bytes, image_mime,
+):
+    config, _ = seeded
+    original = save(seeded)
+    before_records = stored_rows(config, "records")
+    before_versions = stored_rows(config, "record_versions")
+    before_events = stored_rows(config, "events")
+    with pytest.raises(ValueError):
+        save(
+            seeded, record_id=original["id"], image_action=image_action,
+            image_bytes=image_bytes, image_mime=image_mime,
+        )
+    assert stored_rows(config, "records") == before_records
+    assert stored_rows(config, "record_versions") == before_versions
+    assert stored_rows(config, "events") == before_events
+
+
+def test_corrupt_historical_image_rejects_whole_history_and_signs_failure(seeded):
+    config, keys = seeded
+    first = save(
+        seeded, image_action="replace", image_bytes=tiny_image(), image_mime="image/png",
+    )
+    latest = save(seeded, record_id=first["id"], body="Current plaintext must stay hidden")
+    with transaction(config) as conn:
+        conn.execute(
+            "UPDATE record_versions SET image_ciphertext=? WHERE id=? AND version=1",
+            (b"\x00" + first["image_ciphertext"][1:], first["id"]),
+        )
+    bad_versions = stored_rows(config, "record_versions")
+    with pytest.raises(IntegrityError):
+        records.read_record_history(
+            config, keys, owner="alice", record_id=first["id"],
+            src_ip="192.0.2.10", session_ref="test-session",
+        )
+    assert stored_rows(config, "records") == [latest]
+    assert stored_rows(config, "record_versions") == bad_versions
+    events = stored_rows(config, "events")
+    assert [event["kind"] for event in events] == [
+        "record_created", "record_updated", "integrity_failure",
+    ]
+    assert_signed_event(keys, events[-1], kind="integrity_failure", owner="alice", record_id=first["id"])
+
+
+def test_current_snapshot_mismatch_in_image_measurement_is_integrity_failure(seeded):
+    config, keys = seeded
+    saved = save(
+        seeded, image_action="replace", image_bytes=tiny_image(), image_mime="image/png",
+    )
+    with transaction(config) as conn:
+        conn.execute(
+            "UPDATE record_versions SET image_hash_ns=image_hash_ns+1 WHERE id=? AND version=1",
+            (saved["id"],),
+        )
+    with pytest.raises(IntegrityError):
+        records.read_record_history(
+            config, keys, owner="alice", record_id=saved["id"],
+            src_ip="192.0.2.10", session_ref="test-session",
+        )
+    events = stored_rows(config, "events")
+    assert [event["kind"] for event in events] == ["record_created", "integrity_failure"]
+    assert_signed_event(keys, events[-1], kind="integrity_failure", owner="alice", record_id=saved["id"])
+
+
+@pytest.mark.parametrize("operation", ["read", "history", "edit"])
+def test_foreign_owner_is_preflighted_before_full_record_row_fetch(seeded, monkeypatch, operation):
+    config, _ = seeded
+    saved = save(
+        seeded, image_action="replace", image_bytes=tiny_image(), image_mime="image/png",
+    )
+    statements = []
+    original_transaction = records.transaction
+
+    class TracedConnection:
+        def __init__(self, conn):
+            self.conn = conn
+
+        def execute(self, sql, parameters=()):
+            statements.append(" ".join(sql.upper().split()))
+            return self.conn.execute(sql, parameters)
+
+        def __getattr__(self, name):
+            return getattr(self.conn, name)
+
+    @contextmanager
+    def traced_transaction(*args, **kwargs):
+        with original_transaction(*args, **kwargs) as conn:
+            yield TracedConnection(conn)
+
+    monkeypatch.setattr(records, "transaction", traced_transaction)
+    with pytest.raises(records.RecordDenied):
+        if operation == "read":
+            records.read_record(
+                config, seeded[1], owner="bob", record_id=saved["id"],
+                src_ip="192.0.2.10", session_ref="test-session",
+            )
+        elif operation == "history":
+            records.read_record_history(
+                config, seeded[1], owner="bob", record_id=saved["id"],
+                src_ip="192.0.2.10", session_ref="test-session",
+            )
+        else:
+            save(seeded, owner="bob", record_id=saved["id"])
+    record_selects = [sql for sql in statements if "FROM RECORDS" in sql]
+    assert record_selects == ["SELECT OWNER FROM RECORDS WHERE ID=?"]
+
+
+@pytest.mark.parametrize("editing", [False, True])
+def test_failed_image_save_rolls_back_record_snapshot_and_signed_event(seeded, monkeypatch, editing):
+    config, keys = seeded
+    original = save(
+        seeded, image_action="replace", image_bytes=tiny_image(), image_mime="image/png",
+    ) if editing else None
+    before = {table: stored_rows(config, table) for table in (
+        "records", "record_versions", "events",
+    )}
+    append = records.append_app_event
+
+    def append_then_fail(conn, keys, payload):
+        append(conn, keys, payload)
+        raise RuntimeError("Injected image audit failure")
+
+    monkeypatch.setattr(records, "append_app_event", append_then_fail)
+    with pytest.raises(RuntimeError, match="Injected image audit failure"):
+        save(
+            seeded, record_id=original["id"] if original else None,
+            image_action="replace", image_bytes=tiny_image("JPEG"), image_mime="image/jpeg",
+        )
+    for table, expected in before.items():
+        assert stored_rows(config, table) == expected
+    assert all(verify_app_event(keys, event) for event in before["events"])

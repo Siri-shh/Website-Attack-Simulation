@@ -7,6 +7,19 @@ from typing import Iterator
 from .config import Config
 
 
+_IMAGE_COLUMNS = (
+    ("envelope_schema", "INTEGER NOT NULL DEFAULT 1"),
+    ("image_nonce", "BLOB"),
+    ("image_ciphertext", "BLOB"),
+    ("image_mime", "TEXT"),
+    ("image_size", "INTEGER"),
+    ("image_plain_sha256", "TEXT"),
+    ("image_cipher_sha256", "TEXT"),
+    ("image_encrypt_ns", "INTEGER"),
+    ("image_hash_ns", "INTEGER"),
+)
+
+
 def connect(config: Config) -> sqlite3.Connection:
     """Open a configured connection to the lab database."""
     config.data_dir.mkdir(parents=True, exist_ok=True)
@@ -48,9 +61,22 @@ def initialize_database(config: Config) -> None:
     with closing(connect(config)) as connection:
         connection.executescript(schema)
 
-    # Backfill existing records once. Keep the marker and copy in one
-    # transaction so later startup never silently repairs missing history.
+    # SQLite retains old table definitions under CREATE TABLE IF NOT EXISTS.
+    # Add every missing field before snapshot backfill in the same transaction.
+    # Legacy ciphertext, hashes and signatures are never rewritten.
     with transaction(config) as conn:
+        for table in ("records", "record_versions"):
+            present = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+            for name, declaration in _IMAGE_COLUMNS:
+                if name not in present:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {declaration}")
+        conn.execute(
+            "INSERT OR IGNORE INTO schema_migrations (name) VALUES (?)",
+            ("image_envelope_v2_columns",),
+        )
+
+        # Backfill once. The marker prevents later startup from silently
+        # repairing missing history, even on a migrated old database.
         migration = "record_versions_v1_backfill"
         applied = conn.execute(
             "SELECT 1 FROM schema_migrations WHERE name = ?", (migration,)
